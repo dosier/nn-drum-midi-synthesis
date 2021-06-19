@@ -14,19 +14,22 @@ RIDE = 8
 def read_data(path):
     with open(path, 'rb') as f:
         dis = DataInputStream(f)
-        divisionType = dis.read_float()
+        division_type = dis.read_float()
         resolution = dis.read_int()
-        readFully = False
-        while not readFully:
-            # the tick at which the note states for each of the instruments are read
-            tick = dis.read_int()
-            # the number of instruments which have a note on or off event here,
-            # note: if a note for an instrument is on, it may span multiple ticks,
-            #       only when a note off event is read, it should turn off (release) the note!
-            notesOnOrOffCount = dis.read_byte()
-            for i in range(notesOnOrOffCount):
-                instrumentIndex = dis.read_byte()
-                onOrOff = dis.read_boolean()
+        while True:
+            try:
+                # the tick at which the note states for each of the instruments are read
+                tick = dis.read_int()
+                # the number of instruments which have a note on or off event here,
+                # note: if a note for an instrument is on, it may span multiple ticks,
+                #       only when a note off event is read, it should turn off (release) the note!
+                notes_on_or_off_count = dis.read_byte()
+                for i in range(notes_on_or_off_count):
+                    instrument_index = dis.read_byte()
+                    on_or_off = dis.read_boolean()
+            # No more events to read now (struct doesn't support variable length read, bleh)
+            except:
+                break
 
 
 if __name__ == '__main__':
