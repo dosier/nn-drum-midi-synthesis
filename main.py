@@ -69,10 +69,9 @@ def load():
         last_states = None
         try:
             x = []
-            y = []
-            if last_tick >= time_steps * 2:
+            if last_tick > time_steps:
                 states = None
-                for time_step in range(time_steps * 2):
+                for time_step in range(time_steps):
                     if events.__contains__(time_step):
                         states = events[time_step]
                     else:
@@ -81,14 +80,12 @@ def load():
                             for i in range(INSTRUMENTS_COUNT):
                                 states[i] = last_states[i]
                     last_states = states
-                    if time_step < time_steps:
-                        x.append(states)
-                    else:
-                        break
+                    x.append(states)
                 if all(v == 0 for v in x):  # TODO: not sure why some file are `empty`, error in midi conversion part?
                     continue
                 # batches[file] = dict((k, v) for k, v in events.items() if k <= time_steps)
                 X.append(x)
+                # for now only predict the next time step based on the previous time steps
                 Y.append(states)
                 print("Successfully parsed file " + file)
         except:
