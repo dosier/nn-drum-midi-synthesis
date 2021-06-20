@@ -70,23 +70,27 @@ def load():
         try:
             x = []
             y = []
-            for time_step in range(time_steps*2):
-                if events.__contains__(time_step):
-                    states = events[time_step]
-                else:
-                    states = [NOTE_OFF] * INSTRUMENTS_COUNT
-                    if last_states is not None:
-                        for i in range(INSTRUMENTS_COUNT):
-                            states[i] = last_states[i]
-                last_states = states
-                if time_step < time_steps:
-                    x.append(states)
-                else:
-                    y.append(states)
-            # batches[file] = dict((k, v) for k, v in events.items() if k <= time_steps)
-            X.append(x)
-            Y.append(y)
-            print("Successfully parsed file " + file)
+            if last_tick >= time_steps * 2:
+                states = None
+                for time_step in range(time_steps * 2):
+                    if events.__contains__(time_step):
+                        states = events[time_step]
+                    else:
+                        states = [NOTE_OFF] * INSTRUMENTS_COUNT
+                        if last_states is not None:
+                            for i in range(INSTRUMENTS_COUNT):
+                                states[i] = last_states[i]
+                    last_states = states
+                    if time_step < time_steps:
+                        x.append(states)
+                    else:
+                        break
+                if all(v == 0 for v in x):  # TODO: not sure why some file are `empty`, error in midi conversion part?
+                    continue
+                # batches[file] = dict((k, v) for k, v in events.items() if k <= time_steps)
+                X.append(x)
+                Y.append(states)
+                print("Successfully parsed file " + file)
         except:
             print("Failed to parse file " + file)
 
@@ -115,4 +119,4 @@ if __name__ == '__main__':
 
     tensorboard = TensorBoard(log_dir='./logs/nn-drum-synthesis', histogram_freq=1)
 
-    model.fit(X, Y, batch_size=10, epochs=2, callbacks=[tensorboard], validation_split=0.2)
+    model.fit(X, Y, batch_size=69, epochs=2, callbacks=[tensorboard], validation_split=0.2)
