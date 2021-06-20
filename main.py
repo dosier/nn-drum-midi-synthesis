@@ -26,12 +26,12 @@ NOTE_ON = 1
 
 time_steps = 50
 
-PATH = "data"
-
+DATA_PATH = "data"
+SAVE_PATH = "model"
 
 def read_data(file):
     last_tick = 0
-    with open(PATH + "/" + file, 'rb') as f:
+    with open(DATA_PATH + "/" + file, 'rb') as f:
         dis = DataInputStream(f)
         division_type = dis.read_float()
         resolution = dis.read_int()
@@ -64,7 +64,7 @@ def read_data(file):
 def load():
     X = []
     Y = []
-    for file in [f for f in listdir(PATH) if isfile(join(PATH, f))]:
+    for file in [f for f in listdir(DATA_PATH) if isfile(join(DATA_PATH, f))]:
         (last_tick, events) = read_data(file)
         last_states = None
         try:
@@ -117,3 +117,5 @@ if __name__ == '__main__':
     tensorboard = TensorBoard(log_dir='./logs/nn-drum-synthesis', histogram_freq=1)
 
     model.fit(X, Y, batch_size=200, epochs=200, callbacks=[tensorboard], validation_split=0.2)
+
+    model.save(SAVE_PATH)
