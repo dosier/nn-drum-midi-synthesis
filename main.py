@@ -26,7 +26,7 @@ NOTE_ON = 1
 
 time_steps = 50
 
-PATH = "/Users/stanvanderbend/IdeaProjects/nn-project-data/data/dat"
+PATH = "data"
 
 
 def read_data(file):
@@ -116,4 +116,4 @@ if __name__ == '__main__':
 
     tensorboard = TensorBoard(log_dir='./logs/nn-drum-synthesis', histogram_freq=1)
 
-    model.fit(X, Y, batch_size=69, epochs=200, callbacks=[tensorboard], validation_split=0.2)
+    model.fit(X, Y, batch_size=200, epochs=200, callbacks=[tensorboard], validation_split=0.2)
