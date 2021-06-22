@@ -2,7 +2,7 @@ from collections import OrderedDict
 from os import listdir
 from os.path import isfile, join
 
-from constants import NOTE_OFF, NOTE_ON, time_steps, INSTRUMENTS_COUNT, DATA_PATH
+from constants import NOTE_OFF, NOTE_ON, input_length, INSTRUMENTS_COUNT, DATA_PATH, predict_length
 from data_input_stream import DataInputStream
 
 
@@ -43,9 +43,9 @@ def read_file(path):
     last_states = None
     try:
         x = []
-        if last_tick > time_steps:
-            states = None
-            for time_step in range(time_steps+1):
+        y = []
+        if last_tick > input_length:
+            for time_step in range(input_length + predict_length):
                 if events.__contains__(time_step):
                     states = events[time_step]
                 else:
@@ -54,11 +54,14 @@ def read_file(path):
                         for i in range(INSTRUMENTS_COUNT):
                             states[i] = last_states[i]
                 last_states = states
-                if time_step < time_steps:
+                if time_step < input_length:
                     x.append(states)
-            if all(v == 0 for v in x):  # TODO: not sure why some file are `empty`, error in midi conversion part?
+                else:
+                    y.append(states)
+            # TODO: not sure why some file are `empty`, error in midi conversion part?
+            if all(v == 0 for v in x) or all(v == 0 for v in y):
                 return division_type, resolution, None, None
-            return division_type, resolution, x, states
+            return division_type, resolution, x, y
     except:
         print("Failed to parse file " + path)
         return division_type, resolution, None, None
@@ -68,8 +71,8 @@ def load(path_to_dir):
     X = []
     Y = []
     for file in [f for f in listdir(path_to_dir) if isfile(join(path_to_dir, f))]:
-        x, states = read_file(path_to_dir + "/" + file)
-        if x is not None and states is not None:
+        (_, _, x, y) = read_file(path_to_dir + "/" + file)
+        if x is not None and y is not None:
             X.append(x)
-            Y.append(states)
+            Y.append(y)
     return X, Y

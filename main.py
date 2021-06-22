@@ -1,9 +1,9 @@
 import numpy
 from keras import Sequential
 from keras.callbacks import TensorBoard
-from keras.layers import Dense, LSTM, Dropout, Activation
+from keras.layers import Dense, LSTM, RepeatVector
 
-from constants import time_steps, INSTRUMENTS_COUNT, DATA_PATH, SAVE_PATH
+from constants import input_length, INSTRUMENTS_COUNT, DATA_PATH, SAVE_PATH, predict_length
 from data_load import load
 
 if __name__ == '__main__':
@@ -17,10 +17,9 @@ if __name__ == '__main__':
     print("Size of Y {}".format(Y.shape))
 
     model = Sequential()
-    model.add(LSTM(512, input_shape=(time_steps, INSTRUMENTS_COUNT)))
-    model.add(Dropout(0.75))  # 2nd layer of Dropout
-    model.add(Dense(INSTRUMENTS_COUNT))  # a dense layer of 3 tensors
-    model.add(Activation('linear'))
+    model.add(LSTM(512, input_shape=(input_length, INSTRUMENTS_COUNT)))
+    model.add(Dense(INSTRUMENTS_COUNT))
+    model.add(RepeatVector(predict_length))
 
     model.compile(loss='mse', optimizer='rmsprop', metrics=['accuracy'])
 

@@ -12,7 +12,12 @@ INSTRUMENTS_COUNT = 9
 NOTE_OFF = 0
 NOTE_ON = 1
 
-time_steps = 50
+input_length = 250
+predict_length = 50
+
+HOST = "localhost"
+PORT = 9999
 
 DATA_PATH = "data"
 SAVE_PATH = "model"
+PREDICTIONS_PATH = "predictions"
