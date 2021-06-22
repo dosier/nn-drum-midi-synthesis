@@ -35,17 +35,17 @@ def read_data(path):
             # No more events to read now (struct doesn't support variable length read, bleh)
             except:
                 break
-    return last_tick, OrderedDict(sorted(events.items()))
+    return division_type, resolution, last_tick, OrderedDict(sorted(events.items()))
 
 
 def read_file(path):
-    (last_tick, events) = read_data(path)
+    (division_type, resolution, last_tick, events) = read_data(path)
     last_states = None
     try:
         x = []
         if last_tick > time_steps:
             states = None
-            for time_step in range(time_steps):
+            for time_step in range(time_steps+1):
                 if events.__contains__(time_step):
                     states = events[time_step]
                 else:
@@ -54,13 +54,14 @@ def read_file(path):
                         for i in range(INSTRUMENTS_COUNT):
                             states[i] = last_states[i]
                 last_states = states
-                x.append(states)
+                if time_step < time_steps:
+                    x.append(states)
             if all(v == 0 for v in x):  # TODO: not sure why some file are `empty`, error in midi conversion part?
-                return None, None
-            return x, states
+                return division_type, resolution, None, None
+            return division_type, resolution, x, states
     except:
         print("Failed to parse file " + path)
-        return None, None
+        return division_type, resolution, None, None
 
 
 def load(path_to_dir):
