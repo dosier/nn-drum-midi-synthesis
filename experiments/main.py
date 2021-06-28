@@ -25,7 +25,7 @@ if __name__ == '__main__':
 
     model.summary()
 
-    tensorboard = TensorBoard(log_dir='./logs/nn-drum-synthesis', histogram_freq=1)
+    tensorboard = TensorBoard(log_dir='../logs/nn-drum-synthesis', histogram_freq=1)
 
     model.fit(X, Y, batch_size=200, epochs=200, callbacks=[tensorboard], validation_split=0.2)
 

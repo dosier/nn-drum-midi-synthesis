@@ -18,6 +18,6 @@ predict_length = 50
 HOST = "localhost"
 PORT = 9999
 
-DATA_PATH = "data"
-SAVE_PATH = "model"
-PREDICTIONS_PATH = "predictions"
+DATA_PATH = "../data"
+SAVE_PATH = "../model"
+PREDICTIONS_PATH = "../predictions"

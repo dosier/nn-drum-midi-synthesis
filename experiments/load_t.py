@@ -3,7 +3,7 @@ import mido
 from mido import MidiFile
 import os
 
-path = './files' #change to files path
+path = '../files'  #change to files path
 file_count = 268 #number of midi files in folder
 
 white_list=['note_on']#type of messages accepted
