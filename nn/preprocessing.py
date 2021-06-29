@@ -1,0 +1,114 @@
+import glob
+import math
+from typing import List, Optional, Any
+
+import numpy
+from music21 import converter, instrument
+from music21.chord import Chord
+from music21.note import Note
+from music21.stream import Stream, Score
+from natsort import natsort
+from numpy import ndarray
+
+INSTRUMENTS_COUNT = 9
+
+# The number of slices we cut a beat into
+RESOLUTION = 4
+
+KICK = ("KICK", 0)
+SNARE = ("SNARE", 1)
+HIGH_TOM = ("HIGH_TOM", 2)
+LOW_MID_TOM = ("LOW_MID_TOM", 3)
+HIGH_FLOOR_TOM = ("HIGH_FLOOR_TOM", 4)
+OPEN_HI_HAT = ("OPEN_HI_HAT", 5)
+CLOSED_HI_HAT = ("CLOSED_HI_HAT", 6)
+CRASH = ("CRASH", 7)
+RIDE = ("RIDE", 8)
+
+instruments_map = {
+    36: KICK,
+    38: SNARE,
+    40: SNARE,
+    37: SNARE,
+    48: HIGH_TOM,
+    50: HIGH_TOM,
+    45: LOW_MID_TOM,
+    47: LOW_MID_TOM,
+    43: HIGH_FLOOR_TOM,
+    58: HIGH_FLOOR_TOM,
+    46: OPEN_HI_HAT,
+    26: OPEN_HI_HAT,
+    42: CLOSED_HI_HAT,
+    22: CLOSED_HI_HAT,
+    44: CLOSED_HI_HAT,
+    49: CRASH,
+    55: CRASH,
+    57: CRASH,
+    52: CRASH,
+    51: RIDE,
+    59: RIDE,
+    53: RIDE
+}
+
+
+def quantize_midi_files(in_files_path: str = "midi/original", out_files_path="midi/quantized"):
+    for file_path in natsort.natsorted(glob.glob(in_files_path + "/*.mid", recursive=True)):
+        print("Quantize-ing midi file {}".format(file_path))
+        score: Stream = converter.parse(file_path)
+        score: Stream = score.quantize(quarterLengthDivisors=[RESOLUTION, ], processDurations=False)
+        if out_files_path is not None:
+            out_file_path = file_path.replace(in_files_path, out_files_path)
+            score.write(fmt="midi", fp=out_file_path)
+
+
+def process_midi_files(in_files_path: str = "midi/quantized") -> List[ndarray]:
+    min_time_steps = math.inf
+    max_time_steps = -math.inf
+    samples: List[ndarray] = []
+    for file_path in natsort.natsorted(glob.glob(in_files_path + "/*.mid", recursive=True)):
+        print("Parsing file {}".format(file_path))
+        bars: List[Bar] = []
+        current_bar: Bar = Bar(1)
+        chord: Chord
+        for chord in converter.parse(file_path).chordify().flat.notes:
+            onset = int(chord.offset * RESOLUTION)
+            if onset >= current_bar.count * 16:
+                bars.append(current_bar)
+                current_bar = Bar(current_bar.count + 1)
+            note: Note
+            for note in chord:
+                (instrument_name, instrument_idx) = instruments_map[note.pitch.ps]
+                current_bar.add(onset % 16, instrument_idx)
+                # print("\tBar {}\tOffset {}\tInstrument {}".format(current_bar.count, onset % 16, instrument_name))
+        time_steps = len(bars) * 16
+        min_time_steps = min(min_time_steps, time_steps)
+        max_time_steps = max(max_time_steps, time_steps)
+        slices = numpy.zeros(shape=(time_steps, INSTRUMENTS_COUNT))
+        i = 0
+        for bar in bars:
+            for j in range(16):
+                slices[i] = bar.slices[j]
+                i += 1
+        samples.append(slices)
+    print("min_time_steps = {}".format(min_time_steps))
+    print("max_time_steps = {}".format(max_time_steps))
+    return samples
+
+
+class Bar:
+    slices: List[List[int]]
+
+    def __init__(self, count: int):
+        self.count = count
+        # create a 2D array of shape (16, 9)
+        self.slices = []
+        for _ in range(16):
+            notes = [0] * INSTRUMENTS_COUNT
+            self.slices.append(notes)
+
+    def add(self, offset: int, instrument_idx: int):
+        self.slices[offset][instrument_idx] = 1
+
+
+# quantize_midi_files()
+

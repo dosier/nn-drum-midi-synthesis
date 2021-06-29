@@ -6,15 +6,15 @@ from tensorflow.python.keras.layers import Dense, Dropout, Activation
 from tensorflow.python.keras.losses import BinaryCrossentropy
 from tensorflow.python.keras.optimizer_v2.rmsprop import RMSProp
 
+from nn.preprocessing import process_midi_files
+
+numpy.random.seed(69)
+
 INSTRUMENTS_COUNT = 9
 
-# The number of slices we cut a beat into
-RESOLUTION = 16
 
-# The number of beats we want to make predictions from
-INPUT_BEATS = 1
-# The length (n.o. time steps) to makes predictions from
-INPUT_LENGTH = RESOLUTION * INPUT_BEATS
+INPUT_LENGTH = 16
+OUTPUT_LENGTH = 1
 
 # If false than many to one
 MANY_TO_MANY = False
@@ -30,28 +30,28 @@ model.compile(
 )
 model.summary()
 
-X = [
-    [
-        [1, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 1],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 1],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 1],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 1],
-        [0, 1, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 1],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 1],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 1],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 1]
-    ]
-]
+X = []
+Y = []
 
-Y = [[1, 0, 0, 0, 0, 0, 1, 0, 0]]
+for sample in process_midi_files():
+    xy_pair_count = int(len(sample) / (INPUT_LENGTH + OUTPUT_LENGTH)) # 16 predict + 1
+    i = 0
+    for _ in range(xy_pair_count):
+        x = []
+        y = []
+        for _ in range(INPUT_LENGTH):
+            x.append(sample[i])
+            i += 1
+        for _ in range(OUTPUT_LENGTH):
+            if not MANY_TO_MANY:
+                Y.append(sample[i])
+            else:
+                y.append(sample[i])
+            i += 1
+        X.append(x)
+        if MANY_TO_MANY:
+            Y.append(y)
+
 
 X = numpy.array(X)
 Y = numpy.array(Y)
@@ -59,6 +59,15 @@ Y = numpy.array(Y)
 print("Size of X {}".format(X.shape))
 print("Size of Y {}".format(Y.shape))
 
-model.fit(X, Y, epochs=20)
+model.fit(X, Y, batch_size=100, epochs=200, validation_split=0.2)
 
-print(model.predict(X))
+# serialize model to JSON
+model_json = model.to_json()
+with open("model.json", "w") as json_file:
+    json_file.write(model_json)
+# serialize weights to HDF5
+model.save_weights("model.h5")
+print("Saved model to disk")
+
+print(model.predict(numpy.array([X[0]])))
+print(Y[0])
