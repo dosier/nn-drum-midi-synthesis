@@ -1,12 +1,12 @@
 import glob
 import math
-from typing import List, Optional, Any
+from typing import List
 
 import numpy
-from music21 import converter, instrument
+from music21 import converter
 from music21.chord import Chord
 from music21.note import Note
-from music21.stream import Stream, Score
+from music21.stream import Stream
 from natsort import natsort
 from numpy import ndarray
 
@@ -51,7 +51,7 @@ instruments_map = {
 }
 
 
-def quantize_midi_files(in_files_path: str = "midi/original", out_files_path="midi/quantized"):
+def quantize_midi_files(in_files_path: str = "data/midi/original", out_files_path="data/midi/quantized"):
     for file_path in natsort.natsorted(glob.glob(in_files_path + "/*.mid", recursive=True)):
         print("Quantize-ing midi file {}".format(file_path))
         score: Stream = converter.parse(file_path)
@@ -61,7 +61,7 @@ def quantize_midi_files(in_files_path: str = "midi/original", out_files_path="mi
             score.write(fmt="midi", fp=out_file_path)
 
 
-def process_midi_files(in_files_path: str = "midi/quantized") -> List[ndarray]:
+def process_midi_files(in_files_path: str = "data/midi/quantized") -> List[ndarray]:
     min_time_steps = math.inf
     max_time_steps = -math.inf
     samples: List[ndarray] = []
@@ -110,5 +110,21 @@ class Bar:
         self.slices[offset][instrument_idx] = 1
 
 
-# quantize_midi_files()
+def save_as_numpy(samples: List[ndarray], path: str = "data/numpy"):
+    i = 0
+    for sample in samples:
+        file_path = path + "/{}".format(i)
+        numpy.save(file_path, sample)
+        i += 1
 
+
+def load_samples(path: str = "data/numpy") -> List[ndarray]:
+    samples = []
+    for file_path in natsort.natsorted(glob.glob(path + "/*.npy", recursive=True)):
+        samples.append(numpy.load(file_path))
+    return samples
+
+
+if __name__ == "main":
+    quantize_midi_files()
+    save_as_numpy(process_midi_files())
