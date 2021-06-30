@@ -1,8 +1,11 @@
-# The number of instruments used throughout all the samples
+import shutil
+
 import numpy
+
 from tensorflow.keras.layers import LSTM
 from tensorflow.keras.models import Sequential
-from tensorflow.python.keras.layers import Dense, Dropout, Activation
+from tensorflow.python.keras.callbacks import TensorBoard
+from tensorflow.python.keras.layers import Dense, Dropout, Activation, Bidirectional
 from tensorflow.python.keras.losses import BinaryCrossentropy
 from tensorflow.python.keras.optimizer_v2.rmsprop import RMSProp
 
@@ -12,7 +15,6 @@ numpy.random.seed(69)
 
 INSTRUMENTS_COUNT = 9
 
-
 INPUT_LENGTH = 16
 OUTPUT_LENGTH = 1
 
@@ -20,6 +22,11 @@ OUTPUT_LENGTH = 1
 MANY_TO_MANY = False
 X = []
 Y = []
+
+try:
+    shutil.rmtree("logs")
+except:
+    print("Did not remove logs folder (doesn't exist)")
 
 for sample in load_samples():
     xy_pair_count = int(len(sample) / (INPUT_LENGTH + OUTPUT_LENGTH)) # 16 predict + 1
@@ -40,7 +47,6 @@ for sample in load_samples():
         if MANY_TO_MANY:
             Y.append(y)
 
-
 X = numpy.array(X)
 Y = numpy.array(Y)
 
@@ -57,7 +63,14 @@ model.compile(
     optimizer=RMSProp(learning_rate=0.001, momentum=0.9)
 )
 model.summary()
-model.fit(X, Y, batch_size=100, epochs=200, validation_split=0.2)
+model.fit(
+    X,
+    Y,
+    batch_size=200,
+    epochs=1500,
+    validation_split=0.2,
+    callbacks=[TensorBoard(log_dir='logs/nn-drum-synthesis', histogram_freq=1)]
+)
 
 # serialize model to JSON
 model_json = model.to_json()
