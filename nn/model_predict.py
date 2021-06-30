@@ -3,7 +3,7 @@ import numpy
 from nn.model_load import load_model_and_weights
 from nn.preprocessing import load_X_Y
 
-X, Y = load_X_Y(True, 16, 16)
+X, Y = load_X_Y(True, 16, 16, [], 1)
 
 print("Size of X {}".format(X.shape))
 print("Size of Y {}".format(Y.shape))

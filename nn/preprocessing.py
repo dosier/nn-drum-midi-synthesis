@@ -125,9 +125,14 @@ def load_samples(path: str = "data/numpy") -> List[ndarray]:
     return samples
 
 
-def load_X_Y(many_to_many: bool, input_length: int, output_length: int) -> (numpy.ndarray, numpy.ndarray):
+def load_X_Y(many_to_many: bool,
+             input_length: int,
+             output_length: int,
+             remove_instrument_indices: List[int],
+             min_non_zero_entries) -> (numpy.ndarray, numpy.ndarray):
     X = []
     Y = []
+    skipped = 0
     for sample in load_samples():
         xy_pair_count = int(len(sample) / (input_length + output_length))  # 16 predict + 1
         i = 0
@@ -138,14 +143,29 @@ def load_X_Y(many_to_many: bool, input_length: int, output_length: int) -> (nump
                 x.append(sample[i])
                 i += 1
             for _ in range(output_length):
-                if not many_to_many:
-                    Y.append(sample[i])
-                else:
-                    y.append(sample[i])
+                y.append(sample[i])
                 i += 1
+            if len(remove_instrument_indices) > 0:
+                for i in range(len(x)):
+                    x.__setitem__(i, numpy.delete(x[i], remove_instrument_indices))
+                for i in range(len(y)):
+                    y.__setitem__(i, numpy.delete(y[i], remove_instrument_indices))
+
+            x_note_on_count = numpy.count_nonzero(x)
+            if not many_to_many:
+                y_note_on_count = numpy.count_nonzero(y[0])
+            else:
+                y_note_on_count = numpy.count_nonzero(y)
+            if x_note_on_count < min_non_zero_entries or y_note_on_count < min_non_zero_entries:
+                skipped += 1
+                continue
+
             X.append(x)
-            if many_to_many:
+            if not many_to_many:
+                Y.append(y[0])
+            else:
                 Y.append(y)
+    print("Skipped {} entries because too many zeros in x or y".format(skipped))
     return numpy.array(X), numpy.array(Y)
 
 

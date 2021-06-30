@@ -1,42 +1,56 @@
 import shutil
 
 import numpy
-
 from tensorflow.keras.layers import LSTM
 from tensorflow.keras.models import Sequential
-from tensorflow.python.keras.callbacks import TensorBoard
-from tensorflow.python.keras.layers import Dense, Dropout, TimeDistributed
-from tensorflow.python.keras.losses import BinaryCrossentropy
 from tensorflow.keras.optimizers import RMSprop
+from tensorflow.python.keras.callbacks import TensorBoard
+from tensorflow.python.keras.layers import Dense, Dropout, TimeDistributed, Bidirectional
+from tensorflow.python.keras.losses import BinaryCrossentropy
 
-from nn.preprocessing import load_samples, load_X_Y
+from nn.preprocessing import load_X_Y, HIGH_TOM, LOW_MID_TOM, HIGH_FLOOR_TOM, CRASH, RIDE
 
 numpy.random.seed(69)
 
-INSTRUMENTS_COUNT = 9
+REMOVE_INSTRUMENT_INDICES = [
+    # HIGH_TOM[1],
+    # LOW_MID_TOM[1],
+    # HIGH_FLOOR_TOM[1],
+    # CRASH[1],
+    # RIDE[1]
+]
+INSTRUMENTS_COUNT = 9-len(REMOVE_INSTRUMENT_INDICES)
 
 INPUT_LENGTH = 16
-OUTPUT_LENGTH = 16
 
 # If false than many to one
-MANY_TO_MANY = True
+MANY_TO_MANY = False
 
+if MANY_TO_MANY:
+    OUTPUT_LENGTH = INPUT_LENGTH
+else:
+    OUTPUT_LENGTH = 1
 
 try:
     shutil.rmtree("logs")
 except:
     print("Did not remove logs folder (doesn't exist)")
 
-X, Y = load_X_Y(MANY_TO_MANY, INPUT_LENGTH, OUTPUT_LENGTH)
+X, Y = load_X_Y(MANY_TO_MANY, INPUT_LENGTH, OUTPUT_LENGTH, REMOVE_INSTRUMENT_INDICES,
+                min_non_zero_entries=INPUT_LENGTH/2)
 
 print("Size of X {}".format(X.shape))
 print("Size of Y {}".format(Y.shape))
 
 model = Sequential(name="drum_prediction")
-model.add(Dropout(0.2, input_shape=(X.shape[1], INSTRUMENTS_COUNT)))
-model.add(LSTM(64, input_shape=(X.shape[1], INSTRUMENTS_COUNT),
-               return_sequences=True,
-               recurrent_regularizer='l2'))  # The input shape will be a problem, I think, as it does not allow for different lengths of the examples like this
+model.add(Dropout(0.5, input_shape=(INPUT_LENGTH, INSTRUMENTS_COUNT)))
+model.add(Bidirectional(LSTM(
+    units=64,
+    return_sequences=True,
+    recurrent_regularizer='l2')))
+model.add(Dropout(0.5))
+
+model.add(LSTM(64, return_sequences=True))
 model.add(Dropout(0.5))
 
 model.add(LSTM(64, return_sequences=MANY_TO_MANY))
@@ -49,7 +63,7 @@ else:
     model.add(dense1)
 model.add(Dropout(0.5))
 
-dense2 = Dense(9, activation='sigmoid')
+dense2 = Dense(INSTRUMENTS_COUNT, activation='sigmoid')
 if MANY_TO_MANY:
     model.add(TimeDistributed(dense2))
 else:
