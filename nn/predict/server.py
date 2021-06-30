@@ -23,17 +23,27 @@ class Server:
 
     def run(self):
         while True:
-            data: bytes = self.conn.recv(1024)
+            self.conn.send(bytes("ALIVE!" + "\r\n", 'UTF-8'))
+            print("Message sent")
+            data: bytes = self.conn.recv(9*16*8)
             dis = DataInputStream(BytesIO(data))
             X = []
             for time_step in range(16):
                 x = []
                 for instrument_idx in range(9):
-                    x.append(dis.read_boolean())
+                    x.append(int(dis.read_byte()))
                 X.append(x)
-            X = numpy.array(X)
-            y = self.model.predict(X)
-            print(numpy.around(y, 0))
-            out_file_path = "temp/out.dat"
-            with open(out_file_path, 'wr') as out:
-                self.conn.send(bytes(out_file_path))
+            X = numpy.array([X])
+            y = numpy.around(self.model.predict(X)[0], 0)
+            print(y)
+            out = bytearray()
+            for i in range(16):
+                for j in range(9):
+                    if y[i][j] == 1.:
+                        out.append(1)
+                    else:
+                        out.append(0)
+            self.conn.send(out)
+
+
+Server("localhost", 6969).run()
