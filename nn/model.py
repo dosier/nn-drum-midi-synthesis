@@ -5,9 +5,9 @@ import numpy
 from tensorflow.keras.layers import LSTM
 from tensorflow.keras.models import Sequential
 from tensorflow.python.keras.callbacks import TensorBoard
-from tensorflow.python.keras.layers import Dense, Dropout, Activation, Bidirectional
+from tensorflow.python.keras.layers import Dense, Dropout, TimeDistributed
 from tensorflow.python.keras.losses import BinaryCrossentropy
-from tensorflow.python.keras.optimizer_v2.rmsprop import RMSProp
+from tensorflow.keras.optimizers import RMSprop
 
 from nn.preprocessing import load_samples
 
@@ -16,10 +16,10 @@ numpy.random.seed(69)
 INSTRUMENTS_COUNT = 9
 
 INPUT_LENGTH = 16
-OUTPUT_LENGTH = 1
+OUTPUT_LENGTH = 16
 
 # If false than many to one
-MANY_TO_MANY = False
+MANY_TO_MANY = True
 X = []
 Y = []
 
@@ -29,7 +29,7 @@ except:
     print("Did not remove logs folder (doesn't exist)")
 
 for sample in load_samples():
-    xy_pair_count = int(len(sample) / (INPUT_LENGTH + OUTPUT_LENGTH)) # 16 predict + 1
+    xy_pair_count = int(len(sample) / (INPUT_LENGTH + OUTPUT_LENGTH))  # 16 predict + 1
     i = 0
     for _ in range(xy_pair_count):
         x = []
@@ -54,14 +54,33 @@ print("Size of X {}".format(X.shape))
 print("Size of Y {}".format(Y.shape))
 
 model = Sequential(name="drum_prediction")
-model.add(LSTM(units=512, input_shape=(INPUT_LENGTH, INSTRUMENTS_COUNT)))
-model.add(Dropout(rate=0.5))
-model.add(Dense(INSTRUMENTS_COUNT))
-model.add(Activation("sigmoid"))
+model.add(Dropout(0.2, input_shape=(X.shape[1], INSTRUMENTS_COUNT)))
+model.add(LSTM(64, input_shape=(X.shape[1], INSTRUMENTS_COUNT),
+               return_sequences=True,
+               recurrent_regularizer='l2'))  # The input shape will be a problem, I think, as it does not allow for different lengths of the examples like this
+model.add(Dropout(0.5))
+
+model.add(LSTM(64, return_sequences=MANY_TO_MANY))
+model.add(Dropout(0.5))
+
+dense1 = Dense(32, activation='relu', kernel_regularizer='l2')
+if MANY_TO_MANY:
+    model.add(TimeDistributed(dense1))
+else:
+    model.add(dense1)
+model.add(Dropout(0.5))
+
+dense2 = Dense(9, activation='sigmoid')
+if MANY_TO_MANY:
+    model.add(TimeDistributed(dense2))
+else:
+    model.add(dense2)
+
+# model.compile(loss = BinaryCrossentropy(from_logits = False), optimizer = SGD())
 model.compile(
     loss=BinaryCrossentropy(from_logits=False),
-    optimizer=RMSProp(learning_rate=0.001, momentum=0.9)
-)
+    optimizer=RMSprop(learning_rate=0.001, momentum=0.9),
+    metrics=['binary_accuracy'])
 model.summary()
 model.fit(
     X,
