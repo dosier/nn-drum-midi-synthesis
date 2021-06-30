@@ -125,6 +125,30 @@ def load_samples(path: str = "data/numpy") -> List[ndarray]:
     return samples
 
 
+def load_X_Y(many_to_many: bool, input_length: int, output_length: int) -> (numpy.ndarray, numpy.ndarray):
+    X = []
+    Y = []
+    for sample in load_samples():
+        xy_pair_count = int(len(sample) / (input_length + output_length))  # 16 predict + 1
+        i = 0
+        for _ in range(xy_pair_count):
+            x = []
+            y = []
+            for _ in range(input_length):
+                x.append(sample[i])
+                i += 1
+            for _ in range(output_length):
+                if not many_to_many:
+                    Y.append(sample[i])
+                else:
+                    y.append(sample[i])
+                i += 1
+            X.append(x)
+            if many_to_many:
+                Y.append(y)
+    return numpy.array(X), numpy.array(Y)
+
+
 if __name__ == "main":
     quantize_midi_files()
     save_as_numpy(process_midi_files())
