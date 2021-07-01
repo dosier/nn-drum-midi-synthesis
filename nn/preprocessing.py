@@ -172,7 +172,7 @@ def load_X_Y(
                 break
             if generate_shifted_samples:
                 i = offset
-                offset += 1
+                offset += 8
             else:
                 i = 0
 
