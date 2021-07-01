@@ -60,6 +60,13 @@ def quantize_midi_files(in_files_path: str = "data/midi/original", out_files_pat
             out_file_path = file_path.replace(in_files_path, out_files_path)
             score.write(fmt="midi", fp=out_file_path)
 
+def print_meta(in_files_path: str = "data/midi/quantized"):
+    for file_path in natsort.natsorted(glob.glob(in_files_path + "/*.mid", recursive=True)):
+        print("Parsing file {}".format(file_path))
+        midi: Stream = converter.parse(file_path)
+        print("\t quarterLength = {}".format(midi.quarterLength))
+        print("\t measureNumber = {}".format(midi.measureNumber))
+
 
 def process_midi_files(in_files_path: str = "data/midi/quantized") -> List[ndarray]:
     min_time_steps = math.inf
@@ -125,50 +132,77 @@ def load_samples(path: str = "data/numpy") -> List[ndarray]:
     return samples
 
 
-def load_X_Y(many_to_many: bool,
-             input_length: int,
-             output_length: int,
-             remove_instrument_indices: List[int],
-             min_non_zero_entries) -> (numpy.ndarray, numpy.ndarray):
+def load_X_Y(
+        many_to_many: bool,
+        input_length: int,
+        output_length: int,
+        remove_instrument_indices: List[int],
+        min_non_zero_entries: int,
+        generate_shifted_samples=False
+) -> (numpy.ndarray, numpy.ndarray):
+    """
+    Loads X and Y.
+
+    :param many_to_many: if true predict sequences, else predict single time step
+    :param input_length: the number of time_steps to input to the model
+    :param output_length: the number of time_steps the model should output
+    :param remove_instrument_indices: the indices of the instruments to be omitted from the samples
+    :param min_non_zero_entries: the minimum number of non-zero entries in x and y (otherwise omitted)
+    :param generate_shifted_samples: whether each file should create shifted examples (highly increases size of X)
+    :return: (X, Y)
+    """
     X = []
     Y = []
     skipped = 0
     for sample in load_samples():
-        xy_pair_count = int(len(sample) / (input_length + output_length))  # 16 predict + 1
-        i = 0
-        for _ in range(xy_pair_count):
-            x = []
-            y = []
-            for _ in range(input_length):
-                x.append(sample[i])
-                i += 1
-            for _ in range(output_length):
-                y.append(sample[i])
-                i += 1
-            if len(remove_instrument_indices) > 0:
-                for i in range(len(x)):
-                    x.__setitem__(i, numpy.delete(x[i], remove_instrument_indices))
-                for i in range(len(y)):
-                    y.__setitem__(i, numpy.delete(y[i], remove_instrument_indices))
-
-            x_note_on_count = numpy.count_nonzero(x)
-            if not many_to_many:
-                y_note_on_count = numpy.count_nonzero(y[0])
+        offset = 0
+        # Only loops when generate_shifted_samples == True
+        while True:
+            xy_pair_count = int((len(sample) - offset) / (input_length + output_length))
+            if xy_pair_count == 0:
+                break
+            if generate_shifted_samples:
+                i = offset
+                offset += 1
             else:
-                y_note_on_count = numpy.count_nonzero(y)
-            if x_note_on_count < min_non_zero_entries or y_note_on_count < min_non_zero_entries:
-                skipped += 1
-                continue
+                i = 0
 
-            X.append(x)
-            if not many_to_many:
-                Y.append(y[0])
-            else:
-                Y.append(y)
+            for _ in range(xy_pair_count):
+                x = []
+                y = []
+                for _ in range(input_length):
+                    x.append(sample[i])
+                    i += 1
+                for _ in range(output_length):
+                    y.append(sample[i])
+                    i += 1
+                if len(remove_instrument_indices) > 0:
+                    for i in range(len(x)):
+                        x.__setitem__(i, numpy.delete(x[i], remove_instrument_indices))
+                    for i in range(len(y)):
+                        y.__setitem__(i, numpy.delete(y[i], remove_instrument_indices))
+
+                x_note_on_count = numpy.count_nonzero(x)
+                if not many_to_many:
+                    y_note_on_count = numpy.count_nonzero(y[0])
+                else:
+                    y_note_on_count = numpy.count_nonzero(y)
+                if x_note_on_count < min_non_zero_entries or y_note_on_count < min_non_zero_entries:
+                    skipped += 1
+                    continue
+
+                X.append(x)
+                if not many_to_many:
+                    Y.append(y[0])
+                else:
+                    Y.append(y)
+
+            if not generate_shifted_samples:
+                break
     print("Skipped {} entries because too many zeros in x or y".format(skipped))
     return numpy.array(X), numpy.array(Y)
 
 
-if __name__ == "main":
-    quantize_midi_files()
-    save_as_numpy(process_midi_files())
+# quantize_midi_files()
+# save_as_numpy(process_midi_files())
+# print_meta()
