@@ -10,6 +10,8 @@ from music21.stream import Stream
 from natsort import natsort
 from numpy import ndarray
 
+from nn.util import print_progress_bar
+
 INSTRUMENTS_COUNT = 9
 
 # The number of slices we cut a beat into
@@ -59,6 +61,7 @@ def quantize_midi_files(in_files_path: str = "data/midi/original", out_files_pat
         if out_files_path is not None:
             out_file_path = file_path.replace(in_files_path, out_files_path)
             score.write(fmt="midi", fp=out_file_path)
+
 
 def print_meta(in_files_path: str = "data/midi/quantized"):
     for file_path in natsort.natsorted(glob.glob(in_files_path + "/*.mid", recursive=True)):
@@ -154,7 +157,13 @@ def load_X_Y(
     X = []
     Y = []
     skipped = 0
-    for sample in load_samples():
+    shifted_count = 0
+    samples = load_samples()
+    number_of_samples = len(samples)
+    print("Loading X and Y data...")
+    for idx in range(number_of_samples):
+        print_progress_bar(idx, number_of_samples, prefix='Progress:', suffix='Complete', length=50)
+        sample = samples[idx]
         offset = 0
         # Only loops when generate_shifted_samples == True
         while True:
@@ -199,9 +208,12 @@ def load_X_Y(
 
             if not generate_shifted_samples:
                 break
-    print("Skipped {} entries because too many zeros in x or y".format(skipped))
+        shifted_count += offset
+    print("Finished X and Y data!")
+    print("\tSkipped {} entries because too many zeros in x or y".format(skipped))
+    if generate_shifted_samples:
+        print("\tGenerated {} shifted samples from the input data".format(shifted_count))
     return numpy.array(X), numpy.array(Y)
-
 
 # quantize_midi_files()
 # save_as_numpy(process_midi_files())
