@@ -4,6 +4,7 @@ import random
 from typing import List
 
 import numpy
+import tensorflow
 from music21 import converter
 from music21.chord import Chord
 from music21.note import Note
@@ -242,7 +243,8 @@ def load_X_Y(
     print("Finished X and Y data!")
     print("\tSkipped {} entries because too many zeros in x or y".format(skipped))
     if remove_duplicates:
-        print("\tRemoved {} duplicates because chain exceeded {}".format(duplicated_removed, max_consecutive_duplicates))
+        print(
+            "\tRemoved {} duplicates because chain exceeded {}".format(duplicated_removed, max_consecutive_duplicates))
     if generate_shifted_samples:
         print("\tGenerated {} shifted samples from the input data".format(shifted_count))
     return numpy.array(X), numpy.array(Y)
@@ -276,6 +278,20 @@ def shuffle_X_Y(X, Y):
         X[i] = copy_X[j]
         Y[i] = copy_Y[j]
         j += 1
+
+
+def to_data_set(X, Y, test_split: float = 0.2, batch_size: int = 50):
+    n_samples = len(X)
+    length_validation = int(n_samples * test_split)
+    test_examples = X[0:length_validation]
+    test_labels = Y[0:length_validation]
+    train_examples = X[length_validation:n_samples]
+    train_labels = Y[length_validation:n_samples]
+    train_dataset = tensorflow.data.Dataset.from_tensor_slices((train_examples, train_labels))
+    test_dataset = tensorflow.data.Dataset.from_tensor_slices((test_examples, test_labels))
+    options = tensorflow.data.Options()
+    options.experimental_distribute.auto_shard_policy = tensorflow.data.experimental.AutoShardPolicy.OFF
+    return train_dataset.with_options(options).batch(batch_size), test_dataset.with_options(options).batch(batch_size)
 
 # quantize_midi_files()
 # process_midi_files()

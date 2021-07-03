@@ -2,15 +2,18 @@ import random
 
 import keras_tuner
 import numpy
+import tensorflow
 from keras_tuner import HyperParameters
 from sklearn.model_selection import train_test_split
 from tensorflow import keras
 from tensorflow.keras.layers import LSTM, Dense
+from tensorflow.python.distribute.mirrored_strategy import MirroredStrategy
+from tensorflow.python.keras.callbacks import EarlyStopping, TensorBoard
 from tensorflow.python.keras.engine.input_layer import InputLayer
 from tensorflow.python.keras.layers import TimeDistributed, Bidirectional
 from tensorflow.python.keras.losses import BinaryCrossentropy
 
-from nn.preprocessing import load_X_Y, HIGH_TOM, LOW_MID_TOM, HIGH_FLOOR_TOM, CRASH, RIDE, shuffle_X_Y
+from nn.preprocessing import load_X_Y, HIGH_TOM, LOW_MID_TOM, HIGH_FLOOR_TOM, CRASH, RIDE, shuffle_X_Y, to_data_set
 
 REMOVE_INSTRUMENT_INDICES = [
     # HIGH_TOM[1],
@@ -72,8 +75,13 @@ def build_model(hp: HyperParameters):
 tuner = keras_tuner.RandomSearch(
     hypermodel=build_model,
     objective='val_binary_accuracy',
-    max_trials=100
+    max_trials=100,
+    project_name="nn_drum_synthesis",
+    directory="results",
+    distribution_strategy=MirroredStrategy()
 )
+
+tuner.search_space_summary()
 
 X, Y = load_X_Y(many_to_many=MANY_TO_MANY,
                 input_length=INPUT_LENGTH,
@@ -88,8 +96,20 @@ print("Size of X {}".format(X.shape))
 print("Size of Y {}".format(Y.shape))
 
 shuffle_X_Y(X, Y)
+train_dataset, test_dataset = to_data_set(X, Y)
 
-tuner.search(X, Y, epochs=120, validation_split=0.2)
+tuner.search(
+    train_dataset,
+    validation_data=test_dataset,
+    epochs=120,
+    callbacks=[
+        TensorBoard(log_dir="logs"),
+        EarlyStopping(
+            monitor='val_binary_accuracy', min_delta=0.001, patience=50, verbose=1,
+            mode='auto', baseline=0.3, restore_best_weights=True
+        )
+    ]
+)
 best_model = tuner.get_best_models()[0]
 
 if MANY_TO_MANY:
@@ -99,7 +119,6 @@ else:
 name += "RS_"
 name += str(INSTRUMENTS_COUNT) + "_"
 name += str(MIN_NON_ZERO)
-
 
 model_json = best_model.to_json()
 with open("{}.json".format(name), "w") as json_file:
