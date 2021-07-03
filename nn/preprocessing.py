@@ -221,7 +221,7 @@ def load_X_Y(
 
                 if remove_duplicates:
                     if last_x is not None and last_y is not None:
-                        if is_duplicate(current_y, last_x, last_y, x, instruments_count):
+                        if is_duplicate(current_y, last_x, last_y, x, instruments_count, many_to_many):
                             duplicate_count += 1
                         else:
                             duplicate_count = 0
@@ -250,7 +250,7 @@ def load_X_Y(
     return numpy.array(X), numpy.array(Y)
 
 
-def is_duplicate(y1, x2, y2, x1, instrument_count: int) -> bool:
+def is_duplicate(y1, x2, y2, x1, instrument_count: int, many_to_many: bool) -> bool:
     if len(x1) != len(x2) or len(y1) != len(y2):
         return False
 
@@ -258,11 +258,15 @@ def is_duplicate(y1, x2, y2, x1, instrument_count: int) -> bool:
         for j in range(instrument_count):
             if x1[i][j] != x2[i][j]:
                 return False
-    for i in range(len(y1)):
+    if many_to_many:
+        for i in range(len(y1)):
+            for j in range(instrument_count):
+                if y1[i][j] != y2[i][j]:
+                    return False
+    else:
         for j in range(instrument_count):
-            if y1[i][j] != y2[i][j]:
+            if y1[j] != y2[j]:
                 return False
-
     return True
 
 
