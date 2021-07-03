@@ -11,7 +11,7 @@ from music21.stream import Stream
 from natsort import natsort
 from numpy import ndarray
 
-from nn.util.progress_bar import print_progress_bar
+from nn.py_util.progress_bar import print_progress_bar
 
 INSTRUMENTS_COUNT = 9
 
@@ -151,9 +151,9 @@ def load_X_Y(
     """
     Loads X and Y.
 
-    :param many_to_many: if true predict sequences, else predict single time step
-    :param input_length: the number of time_steps to input to the model
-    :param output_length: the number of time_steps the model should output
+    :param many_to_many: if true models sequences, else models single time step
+    :param input_length: the number of time_steps to input to the models
+    :param output_length: the number of time_steps the models should output
     :param remove_instrument_indices: the indices of the instruments to be omitted from the samples
     :param min_non_zero_entries: the minimum number of non-zero entries in x and y (otherwise omitted)
     :param generate_shifted_samples: whether each file should create shifted examples (highly increases size of X)

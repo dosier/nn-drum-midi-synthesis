@@ -73,10 +73,10 @@ tuner.search(X_train, Y_train, epochs=50, validation_data=(X_test, Y_test))
 best_model = tuner.get_best_models()[0]
 
 name = "keras_tuning_best_model"
-# serialize model to JSON
+# serialize models to JSON
 model_json = best_model.to_json()
 with open("{}.json".format(name), "w") as json_file:
     json_file.write(model_json)
 # serialize weights to HDF5
 best_model.save_weights("{}.h5".format(name))
-print("Saved model {} to disk".format(name))
+print("Saved models {} to disk".format(name))

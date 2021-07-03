@@ -86,13 +86,13 @@ model.fit(
     ]
 )
 
-# serialize model to JSON
+# serialize models to JSON
 model_json = model.to_json()
-with open("predict/model.json", "w") as json_file:
+with open("models/server/model.json", "w") as json_file:
     json_file.write(model_json)
 # serialize weights to HDF5
-model.save_weights("model.h5")
-print("Saved model to disk")
+model.save_weights("models.h5")
+print("Saved models to disk")
 
 print(numpy.around(model.predict(numpy.array([X[0]])), 3))
 print(Y[0])

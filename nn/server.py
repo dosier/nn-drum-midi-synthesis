@@ -4,14 +4,14 @@ from io import BytesIO
 import numpy
 
 from nn.model_load import load_model_and_weights
-from nn.predict.data_input_stream import DataInputStream
-from nn.util.midi_converter import MidiConverter
+from nn.py_util.data_input_stream import DataInputStream
+from nn.py_util.midi_converter import MidiConverter
 
 
 class Server:
 
     def __init__(self, host: str, port: int, model=load_model_and_weights()):
-        self.midi_converter = MidiConverter('/Users/stanvanderbend/PycharmProjects/nn-drum-midi-synthesis/nn/output/')
+        self.midi_converter = MidiConverter('/nn/output/')
         self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.model = model
         self.instruments_count: int = self.model.layers[-1].output_shape[-1]

@@ -41,7 +41,7 @@ X = []
 Y = []
 
 for sample in load_samples():
-    xy_pair_count = int(len(sample) / (INPUT_LENGTH + OUTPUT_LENGTH)) # 16 predict + 1
+    xy_pair_count = int(len(sample) / (INPUT_LENGTH + OUTPUT_LENGTH)) # 16 models + 1
     i = 0
     for _ in range(xy_pair_count):
         x = []
@@ -74,17 +74,17 @@ model.add(Dropout(0.2, input_shape=(X.shape[1], INSTRUMENTS_COUNT)))
 model.add(LSTM(64, input_shape = (X.shape[1], INSTRUMENTS_COUNT),
                return_sequences = True, recurrent_regularizer = 'l2')) #The input shape will be a problem, I think, as it does not allow for different lengths of the examples like this
 model.add(Dropout(0.5))
-# model.add(LSTM(64, return_sequences = True))
-# model.add(Dropout(0.5))
+# models.add(LSTM(64, return_sequences = True))
+# models.add(Dropout(0.5))
 model.add(LSTM(64))
 model.add(Dropout(0.5))
 model.add(Dense(32, activation = 'relu', kernel_regularizer = 'l2'))
 model.add(Dropout(0.5))
-# model.add(Dense(16, activation = 'relu', kernel_regularizer = 'l2'))
-# model.add(Dropout(0.5))
+# models.add(Dense(16, activation = 'relu', kernel_regularizer = 'l2'))
+# models.add(Dropout(0.5))
 model.add(Dense(9, activation = 'sigmoid'))
 
-# model.compile(loss = BinaryCrossentropy(from_logits = False), optimizer = SGD())
+# models.compile(loss = BinaryCrossentropy(from_logits = False), optimizer = SGD())
 model.compile(
     loss=BinaryCrossentropy(from_logits=False),
     optimizer=RMSprop(learning_rate=0.001, momentum=0.9),
