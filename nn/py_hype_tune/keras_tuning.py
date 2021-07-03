@@ -45,7 +45,7 @@ def build_model(hp: HyperParameters):
 
     lstm_bidirectional = hp.Choice('lstm_bidirectional', [True, False])
     lstm_units = hp.Choice('lstm_units', [128, 256, 512])
-    lstm_dropout = hp.Choice('lstm_dropout', [0.0, 0.1])
+    lstm_dropout = hp.Choice('lstm_dropout', [0.0, 0.1, 0.2, 0.3])
     n_lstm_layers = hp.Choice('n_lstm_layers', [2, 3, 4, 5])
     for i in range(n_lstm_layers):
         if i < n_lstm_layers - 1:
@@ -53,7 +53,7 @@ def build_model(hp: HyperParameters):
         else:
             return_sequence = MANY_TO_MANY
         lstm_layer = LSTM(
-            units=int(lstm_units / units_scaling[i]),
+            units=int(lstm_units * units_scaling[i]),
             dropout=lstm_dropout,
             return_sequences=return_sequence)
         if i == 0 and lstm_bidirectional:
@@ -97,7 +97,7 @@ tuners = [
         directory=directory + "/bayes"
     )
 ]
-tuner = tuners[0]
+tuner = tuners[2]
 
 tuner.search_space_summary()
 
@@ -121,7 +121,7 @@ tuner.search(
     train,
     validation_data=test,
     batch_size=200,
-    epochs=120,
+    epochs=100,
     use_multiprocessing=True,
     workers=3,
     callbacks=[
