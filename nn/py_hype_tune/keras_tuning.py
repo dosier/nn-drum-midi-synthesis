@@ -16,25 +16,27 @@ from tensorflow.python.keras.losses import BinaryCrossentropy
 from nn.preprocessing import load_X_Y, HIGH_TOM, LOW_MID_TOM, HIGH_FLOOR_TOM, CRASH, RIDE, shuffle_X_Y, to_data_set
 
 REMOVE_INSTRUMENT_INDICES = [
-    # HIGH_TOM[1],
-    # LOW_MID_TOM[1],
-    # HIGH_FLOOR_TOM[1],
-    # CRASH[1],
-    # RIDE[1]
+    HIGH_TOM[1],
+    LOW_MID_TOM[1],
+    HIGH_FLOOR_TOM[1],
+    CRASH[1],
+    RIDE[1]
 ]
 INSTRUMENTS_COUNT = 9 - len(REMOVE_INSTRUMENT_INDICES)
 
 INPUT_LENGTH = 16
 
 # If false than many to one
-MANY_TO_MANY = True
+MANY_TO_MANY = False
 
 if MANY_TO_MANY:
     OUTPUT_LENGTH = INPUT_LENGTH
     MIN_NON_ZERO = OUTPUT_LENGTH  # min amount of non-zero values in (OUTPUT_LENGTH, INSTRUMENTS_COUNT)
+    MAX_CONSECUTIVE_DUPLICATES = 5
 else:
     OUTPUT_LENGTH = 1
     MIN_NON_ZERO = int(INSTRUMENTS_COUNT / 2)  # min amount of non-zero values in (OUTPUT_LENGTH, )
+    MAX_CONSECUTIVE_DUPLICATES = INPUT_LENGTH * 5
 
 units_scaling = [1.0, 0.75, 0.5, 0.25, 0.25, 0.25]
 
@@ -106,7 +108,7 @@ X, Y = load_X_Y(many_to_many=MANY_TO_MANY,
                 output_length=OUTPUT_LENGTH,
                 remove_instrument_indices=REMOVE_INSTRUMENT_INDICES,
                 min_non_zero_entries=MIN_NON_ZERO,
-                max_consecutive_duplicates=5,
+                max_consecutive_duplicates=MAX_CONSECUTIVE_DUPLICATES,
                 generate_shifted_samples=False,
                 path="../data/numpy")
 
@@ -120,7 +122,7 @@ train, test = to_data_set(X, Y)
 tuner.search(
     train,
     validation_data=test,
-    batch_size=200,
+    batch_size=100,
     epochs=100,
     use_multiprocessing=True,
     workers=3,

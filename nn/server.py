@@ -14,7 +14,7 @@ class Server:
         self.midi_converter = MidiConverter('output/')
         self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.model = model
-        self.instruments_count: int = self.model.layers[-1].output_shape[-1]
+        self.instruments_count: int = self.model.lstm_layers[-1].output_shape[-1]
         try:
             self.s.bind((host, port))
             print("Created socket")
