@@ -59,9 +59,7 @@ class ModelController:
             name = "MM"
         else:
             name = "MO"
-        name += "_INST[" + str(self.instruments_count) + "]"
-        name += "_N0[" + str(self.min_non_zero_entries) + "]"
-        name += "_Seed[" + str(self.seed) + "]"
+        name += "_" + str(self.instruments_count) + ""
         self.name = name
         self.model: Optional[Sequential] = None
 
@@ -69,7 +67,7 @@ class ModelController:
         random.seed(self.seed)
         numpy.random.seed(self.seed)
         try:
-            shutil.rmtree(self.logs_path)
+            shutil.rmtree(self.logs_path+"/{}".format(self.name))
         except:
             print("Did not remove logs folder (doesn't exist)")
 
@@ -130,6 +128,9 @@ class ModelController:
         )
 
     def save(self, folder_path: str = ""):
+        name = self.name
+        name += "_N" + str(self.min_non_zero_entries) + "]"
+        name += "_Seed[" + str(self.seed) + "]"
         model_configuration = self.model.to_json()
         with open(folder_path + "/{}.json".format(self.name), "w") as json_file:
             json_file.write(model_configuration)

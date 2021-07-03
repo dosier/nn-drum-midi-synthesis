@@ -8,7 +8,7 @@ model = ModelController(
     train_epochs=200,
     seed=69,
     input_length=16,
-    many_to_many=True,
+    many_to_many=False,
     remove_instrument_indices=[
         HIGH_TOM[1],
         LOW_MID_TOM[1],
@@ -18,9 +18,9 @@ model = ModelController(
     ],
     optimizer=Nadam(),
     first_lstm_bidirectional=True,
-    n_lstm_layers=2,
-    lstm_dropout=0.1,
-    lstm_units=[512, 384]
+    n_lstm_layers=3,
+    lstm_dropout=0.3,
+    lstm_units=[512, 384, 256]
 )
 model.build()
 model.train()
