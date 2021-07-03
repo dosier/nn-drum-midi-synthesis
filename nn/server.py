@@ -10,8 +10,8 @@ from nn.py_util.midi_converter import MidiConverter
 
 class Server:
 
-    def __init__(self, host: str, port: int, model=load_model_and_weights()):
-        self.midi_converter = MidiConverter('/nn/output/')
+    def __init__(self, host: str, port: int, model=load_model_and_weights(path="models/server/")):
+        self.midi_converter = MidiConverter('output/')
         self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.model = model
         self.instruments_count: int = self.model.layers[-1].output_shape[-1]

@@ -7,7 +7,7 @@ from tensorflow.keras.layers import LSTM
 from tensorflow.keras.models import Sequential
 from tensorflow.python.keras.callbacks import TensorBoard, EarlyStopping
 from tensorflow.python.keras.engine.input_layer import InputLayer
-from tensorflow.python.keras.layers import Dense, TimeDistributed
+from tensorflow.python.keras.layers import Dense, TimeDistributed, Bidirectional
 from tensorflow.python.keras.losses import BinaryCrossentropy
 
 from nn.preprocessing import load_X_Y, HIGH_TOM, LOW_MID_TOM, HIGH_FLOOR_TOM, CRASH, RIDE, shuffle_X_Y
@@ -53,9 +53,17 @@ print("Size of Y {}".format(Y.shape))
 
 model = Sequential()
 model.add(InputLayer(input_shape=(INPUT_LENGTH, INSTRUMENTS_COUNT)))
-model.add(LSTM(
+model.add(Bidirectional(LSTM(
     units=256,
-    dropout=0.2,
+    dropout=0.1,
+    return_sequences=True)))
+model.add(LSTM(
+    units=192,
+    dropout=0.1,
+    return_sequences=True))
+model.add(LSTM(
+    units=128,
+    dropout=0.1,
     return_sequences=MANY_TO_MANY))
 if MANY_TO_MANY:
     model.add(TimeDistributed(Dense(INSTRUMENTS_COUNT, activation='sigmoid')))
@@ -64,7 +72,7 @@ else:
 model.compile(
     loss=BinaryCrossentropy(),
     metrics=['accuracy', 'binary_accuracy'],
-    optimizer="Nadam"
+    optimizer="RMSprop"
 )
 model.summary()
 
@@ -91,7 +99,7 @@ model_json = model.to_json()
 with open("models/server/model.json", "w") as json_file:
     json_file.write(model_json)
 # serialize weights to HDF5
-model.save_weights("models.h5")
+model.save_weights("models/server/model.h5")
 print("Saved models to disk")
 
 print(numpy.around(model.predict(numpy.array([X[0]])), 3))
