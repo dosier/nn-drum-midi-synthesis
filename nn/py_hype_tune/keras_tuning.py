@@ -72,14 +72,25 @@ def build_model(hp: HyperParameters):
     return model
 
 
-tuner = keras_tuner.RandomSearch(
-    hypermodel=build_model,
-    objective='val_binary_accuracy',
-    max_trials=100,
-    project_name="nn_drum_synthesis",
-    directory="results",
-    distribution_strategy=MirroredStrategy()
-)
+project_name = "nn_drum_synthesis"
+directory = "results"
+tuners = [
+    keras_tuner.RandomSearch(
+        hypermodel=build_model,
+        objective='val_binary_accuracy',
+        max_trials=100,
+        project_name=project_name,
+        directory=directory+"/randomized_search"
+    ),
+    keras_tuner.Hyperband(
+        hypermodel=build_model,
+        objective='val_binary_accuracy',
+        max_epochs=100,
+        project_name=project_name,
+        directory=directory+"/hyperband"
+    )
+]
+tuner = tuners[1]
 
 tuner.search_space_summary()
 
@@ -96,12 +107,14 @@ print("Size of X {}".format(X.shape))
 print("Size of Y {}".format(Y.shape))
 
 shuffle_X_Y(X, Y)
-train_dataset, test_dataset = to_data_set(X, Y)
 
 tuner.search(
-    train_dataset,
-    validation_data=test_dataset,
+    X,
+    Y,
+    validation_split=0.2,
     epochs=120,
+    use_multiprocessing=True,
+    workers=3,
     callbacks=[
         TensorBoard(log_dir="logs"),
         EarlyStopping(
@@ -116,7 +129,12 @@ if MANY_TO_MANY:
     name = "mtm_"
 else:
     name = "mto_"
-name += "RS_"
+if isinstance(tuner, keras_tuner.RandomSearch):
+    name += "RS_"
+elif isinstance(tuner, keras_tuner.Hyperband):
+    name += "HB_"
+else:
+    name += "unknown_"
 name += str(INSTRUMENTS_COUNT) + "_"
 name += str(MIN_NON_ZERO)
 
