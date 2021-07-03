@@ -11,7 +11,7 @@ from tensorflow.keras.optimizers import RMSprop, Adam, SGD
 from tensorflow.keras.regularizers import l2
 from tensorflow.keras.losses import BinaryCrossentropy
 from tensorflow.keras.callbacks import ModelCheckpoint, TensorBoard
-from keras.wrappers.scikit_learn import KerasClassifier
+from tensorflow.keras.wrappers.scikit_learn import KerasClassifier
 from sklearn.model_selection import train_test_split
 import glob
 import math
@@ -20,106 +20,109 @@ import natsort
 import numpy
 from numpy import ndarray
 from sklearn.model_selection import RandomizedSearchCV
+from tensorflow.python.keras.layers import TimeDistributed
 
-
-directory = 'C:/Users/Sietse/Documents/Biomolecular_Sciences_RUG/NN_AI/data'
-
-def load_samples(path: str = "C:/Users/Sietse/Documents/Biomolecular_Sciences_RUG/NN_AI/data") -> List[ndarray]:
-    samples = []
-    for file_path in natsort.natsorted(glob.glob(path + "/*.npy", recursive=True)):
-        samples.append(numpy.load(file_path))
-    return samples
+from nn.preprocessing import load_samples, load_X_Y, HIGH_TOM, LOW_MID_TOM, HIGH_FLOOR_TOM, CRASH, RIDE
 
 numpy.random.seed(69)
 
-INSTRUMENTS_COUNT = 9
-
+REMOVE_INSTRUMENT_INDICES = [
+    HIGH_TOM[1],
+    LOW_MID_TOM[1],
+    HIGH_FLOOR_TOM[1],
+    CRASH[1],
+    RIDE[1]
+]
+INSTRUMENTS_COUNT = 9-len(REMOVE_INSTRUMENT_INDICES)
 
 INPUT_LENGTH = 16
-OUTPUT_LENGTH = 1
 
 # If false than many to one
 MANY_TO_MANY = False
-X = []
-Y = []
 
-for sample in load_samples():
-    xy_pair_count = int(len(sample) / (INPUT_LENGTH + OUTPUT_LENGTH)) # 16 predict + 1
-    i = 0
-    for _ in range(xy_pair_count):
-        x = []
-        y = []
-        for _ in range(INPUT_LENGTH):
-            x.append(sample[i])
-            i += 1
-        for _ in range(OUTPUT_LENGTH):
-            if not MANY_TO_MANY:
-                Y.append(sample[i])
-            else:
-                y.append(sample[i])
-            i += 1
-        X.append(x)
-        if MANY_TO_MANY:
-            Y.append(y)
+if MANY_TO_MANY:
+    OUTPUT_LENGTH = INPUT_LENGTH
+else:
+    OUTPUT_LENGTH = 1
 
-X = numpy.array(X)
-Y = numpy.array(Y)
+X, Y = load_X_Y(many_to_many=MANY_TO_MANY,
+                input_length=INPUT_LENGTH,
+                output_length=OUTPUT_LENGTH,
+                remove_instrument_indices=REMOVE_INSTRUMENT_INDICES,
+                generate_shifted_samples=False,
+                min_non_zero_entries=2)
 
-print(X.shape)
+print("Size of X {}".format(X.shape))
+print("Size of Y {}".format(Y.shape))
 
-X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size = 0.2, random_state = 69)
+X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2, random_state=69)
 
-tensorboard_callback = TensorBoard(log_dir='C:/Users/Sietse/Documents/Biomolecular_Sciences_RUG/NN_AI/logs', histogram_freq=1)
+tensorboard_callback = TensorBoard(log_dir='logs', histogram_freq=1)
 
-Optimizer = RMSprop(learning_rate = 0.001, rho = 0.9, momentum = 0.0, epsilon = 10^-7) #add arguments to 
 
-def create_model(optimizer = RMSprop(), initial_dropout = 0.2, dropout = 0.5,
-                 n_layers = 2, r_reg = 'l2', k_reg = 'l2', layer_width = 64):
-    model = Sequential()    
-    model.add(Dropout(initial_dropout, input_shape=(X.shape[1], INSTRUMENTS_COUNT)))
-    model.add(LSTM(layer_width, input_shape = (X.shape[1], INSTRUMENTS_COUNT),
-                    return_sequences = True, recurrent_regularizer = r_reg,
-                    kernel_regularizer = k_reg))
+def create_model(optimizer=RMSprop(), dropout=0.5,
+                 n_layers=2, r_reg='l2', k_reg='l2', layer_width=64):
+    model = Sequential()
+    model.add(LSTM(layer_width,
+                   input_shape=(INPUT_LENGTH, INSTRUMENTS_COUNT),
+                   return_sequences=True,
+                   recurrent_regularizer=r_reg,
+                   kernel_regularizer=k_reg))
     model.add(Dropout(dropout))
+
+    last_layer_width = layer_width
     for layer in range(n_layers - 2):
-        model.add(LSTM(layer_width, return_sequences = True,
-                       recurrent_regularizer = r_reg, kernel_regularizer = k_reg))
+        if layer == 0:
+            last_layer_width = min(32, int(layer_width/1.5))
+        if layer == 1:
+            last_layer_width = min(32, int(layer_width/2))
+        elif layer == 2:
+            last_layer_width = min(32, int(layer_width/2.5))
+        elif layer == 3:
+            last_layer_width = min(32, int(layer_width/3))
+        model.add(LSTM(last_layer_width,
+                       return_sequences=True,
+                       recurrent_regularizer=r_reg,
+                       kernel_regularizer=k_reg))
         model.add(Dropout(dropout))
-    model.add(LSTM(layer_width, recurrent_regularizer = r_reg, kernel_regularizer = k_reg))
+
+    model.add(LSTM(min(32, last_layer_width),
+                   return_sequences=MANY_TO_MANY,
+                   recurrent_regularizer=r_reg,
+                   kernel_regularizer=k_reg))
     model.add(Dropout(dropout))
-    # model.add(Dense(32, activation = 'relu', kernel_regularizer = 'l2'))
-    # model.add(Dropout(0.5))
-    # model.add(Dense(16, activation = 'relu', kernel_regularizer = 'l2'))
-    # model.add(Dropout(0.5))
-    model.add(Dense(9, activation = 'sigmoid'))
-    
+
+    dense = Dense(INSTRUMENTS_COUNT, activation='sigmoid')
+    if MANY_TO_MANY:
+        model.add(TimeDistributed(dense))
+    else:
+        model.add(dense)
     model.compile(
         loss=BinaryCrossentropy(from_logits=False),
         optimizer=optimizer,
-        metrics = ['accuracy'])
-    
+        metrics=['accuracy', 'binary_accuracy'])
+
     return model
 
-SKL_model = KerasClassifier(build_fn = create_model, verbose = 1)
+
+SKL_model = KerasClassifier(build_fn=create_model, verbose=2)
 
 param_grid = {
-    'optimizer':[RMSprop(), RMSprop(learning_rate = 0.01), SGD()],
-    'initial_dropout':[0.0, 0.1, 0.2],
-    'dropout':[0.0, 0.25, 0.5],
-    'n_layers':[2, 3],
-    'r_reg':[None, 'l1', 'l2'],
-    'k_reg':[None, 'l1', 'l2'],
-    'layer_width':[32, 64, 128, 256, 512]    
-    }
+    'optimizer': [RMSprop(), RMSprop(learning_rate=0.01), SGD()],
+    'dropout': [0.1, 0.2, 0.3, 0.4],
+    'n_layers': [2, 3, 4],
+    'r_reg': [None, 'l1', 'l2'],
+    'k_reg': [None, 'l1', 'l2'],
+    'layer_width': [32, 64, 128, 256]
+}
 
 k_folds = 10
 
-grid_search = RandomizedSearchCV(SKL_model, param_grid, n_iter = 100, n_jobs = -1, 
-                                 verbose = 1, return_train_score = True, cv = k_folds)
+grid_search = RandomizedSearchCV(SKL_model, param_grid, n_iter=150, n_jobs=3,
+                                 verbose=2, return_train_score=True, cv=k_folds)
 
 grid_results = grid_search.fit(X_train, Y_train)
 print('Best score: ' + grid_results.best_score_ + '. Params:' + grid_results.best_params_)
 print(grid_results.best_score_)
 print(grid_results.best_params_)
 # model.fit(X, Y, batch_size = 100, epochs = 200, callbacks=[tensorboard_callback], verbose = 1, validation_split = 0.2)
-
