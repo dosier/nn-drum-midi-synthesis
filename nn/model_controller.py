@@ -132,7 +132,7 @@ class ModelController:
         name += "_N" + str(self.min_non_zero_entries) + "]"
         name += "_Seed[" + str(self.seed) + "]"
         model_configuration = self.model.to_json()
-        with open(folder_path + "/{}.json".format(self.name), "w") as json_file:
+        with open(folder_path + "{}.json".format(self.name), "w") as json_file:
             json_file.write(model_configuration)
         self.model.save_weights(folder_path + "/{}.h5".format(self.name))
         print("Saved model {} to disk".format(self.name))
