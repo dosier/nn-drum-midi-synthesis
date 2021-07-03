@@ -141,11 +141,13 @@ def load_X_Y(
         output_length: int,
         remove_instrument_indices: List[int],
         min_non_zero_entries: int,
-        generate_shifted_samples=False
+        generate_shifted_samples=False,
+        path="data/numpy"
 ) -> (numpy.ndarray, numpy.ndarray):
     """
     Loads X and Y.
 
+    :param path:
     :param many_to_many: if true predict sequences, else predict single time step
     :param input_length: the number of time_steps to input to the model
     :param output_length: the number of time_steps the model should output
@@ -158,7 +160,7 @@ def load_X_Y(
     Y = []
     skipped = 0
     shifted_count = 0
-    samples = load_samples()
+    samples = load_samples(path)
     number_of_samples = len(samples)
     print("Loading X and Y data...")
     for idx in range(number_of_samples):

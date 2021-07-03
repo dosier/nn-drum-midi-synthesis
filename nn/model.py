@@ -38,12 +38,9 @@ try:
 except:
     print("Did not remove logs folder (doesn't exist)")
 
-X, Y = load_X_Y(many_to_many=MANY_TO_MANY,
-                input_length=INPUT_LENGTH,
-                output_length=OUTPUT_LENGTH,
-                remove_instrument_indices=REMOVE_INSTRUMENT_INDICES,
-                generate_shifted_samples=False,
-                min_non_zero_entries=4)
+X, Y = load_X_Y(many_to_many=MANY_TO_MANY, input_length=INPUT_LENGTH, output_length=OUTPUT_LENGTH,
+                remove_instrument_indices=REMOVE_INSTRUMENT_INDICES, min_non_zero_entries=4,
+                generate_shifted_samples=False)
 
 print("Size of X {}".format(X.shape))
 print("Size of Y {}".format(Y.shape))
