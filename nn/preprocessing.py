@@ -264,7 +264,7 @@ def is_duplicate(y1, x2, y2, x1, instrument_count: int) -> bool:
     return True
 
 
-def shuffle_X_Y(X, Y) -> (numpy.ndarray, numpy.ndarray):
+def shuffle_X_Y(X, Y):
     indices = []
     for i in range(len(X)):
         indices.append(i)

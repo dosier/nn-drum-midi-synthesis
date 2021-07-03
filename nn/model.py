@@ -68,11 +68,11 @@ model.compile(
 )
 model.summary()
 
-shuffled_X, shuffled_Y = shuffle_X_Y(X, Y)
+shuffle_X_Y(X, Y)
 
 model.fit(
-    shuffled_X,
-    shuffled_Y,
+    X,
+    Y,
     batch_size=40,
     epochs=500,
     validation_split=0.2,
