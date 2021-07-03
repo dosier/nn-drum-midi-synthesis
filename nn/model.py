@@ -1,18 +1,18 @@
+import random
 import shutil
 
 import numpy
-from sklearn.model_selection import train_test_split
+from numpy import ndarray
 from tensorflow.keras.layers import LSTM
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.optimizers import RMSprop
 from tensorflow.python.keras.callbacks import TensorBoard, EarlyStopping
 from tensorflow.python.keras.engine.input_layer import InputLayer
-from tensorflow.python.keras.layers import Dense, Dropout, TimeDistributed, Bidirectional
+from tensorflow.python.keras.layers import Dense, TimeDistributed
 from tensorflow.python.keras.losses import BinaryCrossentropy
-from tensorflow.python.keras.optimizer_v2.nadam import Nadam
 
-from nn.preprocessing import load_X_Y, HIGH_TOM, LOW_MID_TOM, HIGH_FLOOR_TOM, CRASH, RIDE
+from nn.preprocessing import load_X_Y, HIGH_TOM, LOW_MID_TOM, HIGH_FLOOR_TOM, CRASH, RIDE, shuffle_X_Y
 
+random.seed(69)
 numpy.random.seed(69)
 
 REMOVE_INSTRUMENT_INDICES = [
@@ -41,6 +41,8 @@ try:
 except:
     print("Did not remove logs folder (doesn't exist)")
 
+X: ndarray
+Y: ndarray
 X, Y = load_X_Y(many_to_many=MANY_TO_MANY, input_length=INPUT_LENGTH, output_length=OUTPUT_LENGTH,
                 remove_instrument_indices=REMOVE_INSTRUMENT_INDICES, min_non_zero_entries=MIN_NON_ZERO,
                 max_consecutive_duplicates=5,
@@ -66,11 +68,11 @@ model.compile(
 )
 model.summary()
 
-X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2, random_state=69)
+shuffled_X, shuffled_Y = shuffle_X_Y(X, Y)
 
 model.fit(
-    X,
-    Y,
+    shuffled_X,
+    shuffled_Y,
     batch_size=40,
     epochs=500,
     validation_split=0.2,

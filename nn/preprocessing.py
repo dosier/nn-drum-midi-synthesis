@@ -1,5 +1,6 @@
 import glob
 import math
+import random
 from typing import List
 
 import numpy
@@ -145,7 +146,7 @@ def load_X_Y(
         min_non_zero_entries: int,
         generate_shifted_samples: object = False,
         max_consecutive_duplicates: int = math.inf,
-        path: object = "data/numpy"
+        path: str = "data/numpy"
 ) -> (numpy.ndarray, numpy.ndarray):
     """
     Loads X and Y.
@@ -261,6 +262,20 @@ def is_duplicate(y1, x2, y2, x1, instrument_count: int) -> bool:
                 return False
 
     return True
+
+
+def shuffle_X_Y(X, Y) -> (numpy.ndarray, numpy.ndarray):
+    indices = []
+    for i in range(len(X)):
+        indices.append(i)
+    random.shuffle(indices)
+    copy_X = numpy.copy(X)
+    copy_Y = numpy.copy(Y)
+    j = 0
+    for i in indices:
+        X[i] = copy_X[j]
+        Y[i] = copy_Y[j]
+        j += 1
 
 # quantize_midi_files()
 # process_midi_files()
