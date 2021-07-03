@@ -23,6 +23,11 @@ model = ModelController(
     lstm_units=[512, 384, 256]
 )
 model.build()
-model.train()
-model.save()
+
+# model.train()
+# model.save()
+
+model.load_weights()
+model.plot()
+
 

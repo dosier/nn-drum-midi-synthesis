@@ -11,6 +11,7 @@ from tensorflow.python.keras.engine.input_layer import InputLayer
 from tensorflow.python.keras.layers import Dense, TimeDistributed, Bidirectional
 from tensorflow.python.keras.losses import BinaryCrossentropy
 from tensorflow.python.keras.optimizer_v2.optimizer_v2 import OptimizerV2
+from tensorflow.python.keras.utils.vis_utils import plot_model
 
 from nn.preprocessing import load_X_Y, shuffle_X_Y
 
@@ -67,7 +68,7 @@ class ModelController:
         random.seed(self.seed)
         numpy.random.seed(self.seed)
         try:
-            shutil.rmtree(self.logs_path+"/{}".format(self.name))
+            shutil.rmtree(self.logs_path + "/{}".format(self.name))
         except:
             print("Did not remove logs folder (doesn't exist)")
 
@@ -127,6 +128,9 @@ class ModelController:
             ]
         )
 
+    def load_weights(self, folder_path: str = ""):
+        self.model.load_weights(folder_path + "{}.h5".format(self.name))
+
     def save(self, folder_path: str = ""):
         name = self.name
         name += "_N" + str(self.min_non_zero_entries) + "]"
@@ -136,3 +140,9 @@ class ModelController:
             json_file.write(model_configuration)
         self.model.save_weights(folder_path + "{}.h5".format(self.name))
         print("Saved model {} to disk".format(self.name))
+
+    def plot(self, folder_path: str = "plots/"):
+        plot_model(self.model,
+                   to_file=folder_path + '{}.png'.format(self.name),
+                   show_shapes=True,
+                   show_layer_names=True)

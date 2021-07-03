@@ -7,3 +7,5 @@ mido~=1.2.10
 scikit-learn~=0.24.2
 keras-tuner==1.0.3
 tensorboard~=2.5.0
+pydot==1.4.2
+graphviz==0.16
