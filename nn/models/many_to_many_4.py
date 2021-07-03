@@ -4,6 +4,8 @@ from nn.model_controller import ModelController
 from nn.preprocessing import HIGH_TOM, LOW_MID_TOM, HIGH_FLOOR_TOM, CRASH, RIDE
 
 model = ModelController(
+    batch_size=200,
+    train_epochs=200,
     seed=69,
     input_length=16,
     many_to_many=True,

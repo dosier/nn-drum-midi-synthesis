@@ -108,7 +108,7 @@ class ModelController:
                         self.output_length,
                         self.remove_instrument_indices,
                         self.min_non_zero_entries,
-                        self.max_consecutive_duplicates,
+                        max_consecutive_duplicates=self.max_consecutive_duplicates,
                         path=self.data_path)
         shuffle_X_Y(X, Y)
         print("Size of X {}".format(X.shape))
