@@ -290,8 +290,9 @@ def to_data_set(X, Y, test_split: float = 0.2, batch_size: int = 50):
     train_dataset = tensorflow.data.Dataset.from_tensor_slices((train_examples, train_labels))
     test_dataset = tensorflow.data.Dataset.from_tensor_slices((test_examples, test_labels))
     options = tensorflow.data.Options()
-    options.experimental_distribute.auto_shard_policy = tensorflow.data.experimental.AutoShardPolicy.OFF
-    return train_dataset.with_options(options).batch(batch_size), test_dataset.with_options(options).batch(batch_size)
+    # options.experimental_distribute.auto_shard_policy = tensorflow.data.experimental.AutoShardPolicy.OFF
+    return train_dataset.with_options(options).cache().batch(batch_size), \
+           test_dataset.with_options(options).cache().batch(batch_size)
 
 # quantize_midi_files()
 # process_midi_files()

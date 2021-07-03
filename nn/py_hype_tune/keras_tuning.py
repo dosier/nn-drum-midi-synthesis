@@ -88,9 +88,16 @@ tuners = [
         max_epochs=100,
         project_name=project_name,
         directory=directory+"/hyperband"
+    ),
+    keras_tuner.BayesianOptimization(
+        hypermodel=build_model,
+        objective='val_binary_accuracy',
+        max_trials=100,
+        project_name=project_name,
+        directory=directory + "/bayes"
     )
 ]
-tuner = tuners[1]
+tuner = tuners[0]
 
 tuner.search_space_summary()
 
@@ -108,10 +115,12 @@ print("Size of Y {}".format(Y.shape))
 
 shuffle_X_Y(X, Y)
 
+train, test = to_data_set(X, Y)
+
 tuner.search(
-    X,
-    Y,
-    validation_split=0.2,
+    train,
+    validation_data=test,
+    batch_size=200,
     epochs=120,
     use_multiprocessing=True,
     workers=3,
@@ -133,6 +142,8 @@ if isinstance(tuner, keras_tuner.RandomSearch):
     name += "RS_"
 elif isinstance(tuner, keras_tuner.Hyperband):
     name += "HB_"
+elif isinstance(tuner, keras_tuner.BayesianOptimization):
+    name += "BO_"
 else:
     name += "unknown_"
 name += str(INSTRUMENTS_COUNT) + "_"
