@@ -141,8 +141,8 @@ def load_X_Y(
         output_length: int,
         remove_instrument_indices: List[int],
         min_non_zero_entries: int,
-        generate_shifted_samples=False,
-        path="data/numpy"
+        generate_shifted_samples: object = False,
+        path: object = "data/numpy"
 ) -> (numpy.ndarray, numpy.ndarray):
     """
     Loads X and Y.
