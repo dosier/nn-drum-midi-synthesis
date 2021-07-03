@@ -38,6 +38,12 @@ else:
     MIN_NON_ZERO = int(INSTRUMENTS_COUNT / 2)  # min amount of non-zero values in (OUTPUT_LENGTH, )
     MAX_CONSECUTIVE_DUPLICATES = INPUT_LENGTH * 5
 
+if MANY_TO_MANY:
+    name = "mtm_"
+else:
+    name = "mto_"
+name += str(INSTRUMENTS_COUNT) + "_"
+name += str(MIN_NON_ZERO)
 units_scaling = [1.0, 0.75, 0.5, 0.25, 0.25, 0.25]
 
 
@@ -74,7 +80,7 @@ def build_model(hp: HyperParameters):
     return model
 
 
-project_name = "nn_drum_synthesis"
+project_name = name
 directory = "results"
 tuners = [
     keras_tuner.RandomSearch(
@@ -127,7 +133,7 @@ tuner.search(
     use_multiprocessing=True,
     workers=3,
     callbacks=[
-        TensorBoard(log_dir="logs"),
+        TensorBoard(log_dir="logs/"+project_name),
         EarlyStopping(
             monitor='val_binary_accuracy', min_delta=0.001, patience=50, verbose=1,
             mode='auto', baseline=0.3, restore_best_weights=True
@@ -136,10 +142,6 @@ tuner.search(
 )
 best_model = tuner.get_best_models()[0]
 
-if MANY_TO_MANY:
-    name = "mtm_"
-else:
-    name = "mto_"
 if isinstance(tuner, keras_tuner.RandomSearch):
     name += "RS_"
 elif isinstance(tuner, keras_tuner.Hyperband):
@@ -148,9 +150,6 @@ elif isinstance(tuner, keras_tuner.BayesianOptimization):
     name += "BO_"
 else:
     name += "unknown_"
-name += str(INSTRUMENTS_COUNT) + "_"
-name += str(MIN_NON_ZERO)
-
 model_json = best_model.to_json()
 with open("{}.json".format(name), "w") as json_file:
     json_file.write(model_json)
