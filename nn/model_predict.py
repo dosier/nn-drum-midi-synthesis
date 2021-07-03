@@ -8,7 +8,7 @@ X, Y = load_X_Y(True, 16, 16, [], 1)
 print("Size of X {}".format(X.shape))
 print("Size of Y {}".format(Y.shape))
 
-model = load_model_and_weights()
+model = load_model_and_weights("predict/")
 print(numpy.around(model.predict(numpy.array([X[0]])), 3)[0])
 print(numpy.around(model.predict(numpy.array([X[0]])), 0)[0])
 print(Y[0])

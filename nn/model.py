@@ -1,6 +1,7 @@
 import shutil
 
 import numpy
+from sklearn.model_selection import train_test_split
 from tensorflow.keras.layers import LSTM
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.optimizers import RMSprop
@@ -30,8 +31,10 @@ MANY_TO_MANY = True
 
 if MANY_TO_MANY:
     OUTPUT_LENGTH = INPUT_LENGTH
+    MIN_NON_ZERO = int(OUTPUT_LENGTH / 2)  # min amount of non-zero values in (OUTPUT_LENGTH, INSTRUMENTS_COUNT)
 else:
     OUTPUT_LENGTH = 1
+    MIN_NON_ZERO = int(INSTRUMENTS_COUNT / 2)  # min amount of non-zero values in (OUTPUT_LENGTH, )
 
 try:
     shutil.rmtree("logs")
@@ -39,52 +42,43 @@ except:
     print("Did not remove logs folder (doesn't exist)")
 
 X, Y = load_X_Y(many_to_many=MANY_TO_MANY, input_length=INPUT_LENGTH, output_length=OUTPUT_LENGTH,
-                remove_instrument_indices=REMOVE_INSTRUMENT_INDICES, min_non_zero_entries=4,
+                remove_instrument_indices=REMOVE_INSTRUMENT_INDICES, min_non_zero_entries=MIN_NON_ZERO,
+                max_consecutive_duplicates=5,
                 generate_shifted_samples=False)
 
 print("Size of X {}".format(X.shape))
 print("Size of Y {}".format(Y.shape))
-dropout_rate = 0.2
-model = Sequential(name="drum_prediction")
+
+model = Sequential()
 model.add(InputLayer(input_shape=(INPUT_LENGTH, INSTRUMENTS_COUNT)))
-# model.add(Dropout(0.5))
-model.add(Bidirectional(LSTM(
-    units=64,
-    dropout=0.3,
-    recurrent_dropout=0.3,
-    return_sequences=True)))
 model.add(LSTM(
-    units=96,
-    dropout=0.1,
-    recurrent_dropout=0.1,
-    return_sequences=True))
-model.add(LSTM(
-    units=48,
-    dropout=0.05,
-    recurrent_dropout=0.025,
+    units=256,
+    dropout=0.2,
     return_sequences=MANY_TO_MANY))
-
-dense2 = Dense(INSTRUMENTS_COUNT, activation='sigmoid')
 if MANY_TO_MANY:
-    model.add(TimeDistributed(dense2))
+    model.add(TimeDistributed(Dense(INSTRUMENTS_COUNT, activation='sigmoid')))
 else:
-    model.add(dense2)
-
+    model.add(Dense(INSTRUMENTS_COUNT, activation='sigmoid'))
 model.compile(
-    loss=BinaryCrossentropy(from_logits=False),
-    optimizer=Nadam(),
-    metrics=['accuracy', 'binary_accuracy'])
+    loss=BinaryCrossentropy(),
+    metrics=['accuracy', 'binary_accuracy'],
+    optimizer="Nadam"
+)
 model.summary()
+
+X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2, random_state=69)
+
 model.fit(
     X,
     Y,
-    batch_size=2000,
-    epochs=1500,
+    batch_size=40,
+    epochs=500,
     validation_split=0.2,
+    # validation_data=(X_test, Y_test),
     callbacks=[
         TensorBoard(log_dir='logs/nn-drum-synthesis', histogram_freq=1),
         EarlyStopping(
-            monitor='val_binary_accuracy', min_delta=0.001, patience=300, verbose=1,
+            monitor='val_binary_accuracy', min_delta=0.001, patience=100, verbose=1,
             mode='auto', baseline=0.3, restore_best_weights=True
         )
     ]
@@ -92,7 +86,7 @@ model.fit(
 
 # serialize model to JSON
 model_json = model.to_json()
-with open("model.json", "w") as json_file:
+with open("predict/model.json", "w") as json_file:
     json_file.write(model_json)
 # serialize weights to HDF5
 model.save_weights("model.h5")

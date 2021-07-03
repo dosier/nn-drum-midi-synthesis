@@ -10,7 +10,7 @@ from music21.stream import Stream
 from natsort import natsort
 from numpy import ndarray
 
-from nn.util import print_progress_bar
+from nn.util.progress_bar import print_progress_bar
 
 INSTRUMENTS_COUNT = 9
 
@@ -77,10 +77,12 @@ def process_midi_files(in_files_path: str = "data/midi/quantized") -> List[ndarr
     samples: List[ndarray] = []
     for file_path in natsort.natsorted(glob.glob(in_files_path + "/*.mid", recursive=True)):
         print("Parsing file {}".format(file_path))
+        stream: Stream = converter.parse(file_path)
+        print("\tquarterLength {}".format(stream.quarterLength))
         bars: List[Bar] = []
         current_bar: Bar = Bar(1)
         chord: Chord
-        for chord in converter.parse(file_path).chordify().flat.notes:
+        for chord in stream.chordify().flat.notes:
             onset = int(chord.offset * RESOLUTION)
             if onset >= current_bar.count * 16:
                 bars.append(current_bar)
@@ -89,7 +91,7 @@ def process_midi_files(in_files_path: str = "data/midi/quantized") -> List[ndarr
             for note in chord:
                 (instrument_name, instrument_idx) = instruments_map[note.pitch.ps]
                 current_bar.add(onset % 16, instrument_idx)
-                # print("\tBar {}\tOffset {}\tInstrument {}".format(current_bar.count, onset % 16, instrument_name))
+                print("\tBar {}\tOffset {}\tInstrument {}".format(current_bar.count, onset % 16, instrument_name))
         time_steps = len(bars) * 16
         min_time_steps = min(min_time_steps, time_steps)
         max_time_steps = max(max_time_steps, time_steps)
@@ -142,25 +144,30 @@ def load_X_Y(
         remove_instrument_indices: List[int],
         min_non_zero_entries: int,
         generate_shifted_samples: object = False,
+        max_consecutive_duplicates: int = math.inf,
         path: object = "data/numpy"
 ) -> (numpy.ndarray, numpy.ndarray):
     """
     Loads X and Y.
 
-    :param path:
     :param many_to_many: if true predict sequences, else predict single time step
     :param input_length: the number of time_steps to input to the model
     :param output_length: the number of time_steps the model should output
     :param remove_instrument_indices: the indices of the instruments to be omitted from the samples
     :param min_non_zero_entries: the minimum number of non-zero entries in x and y (otherwise omitted)
     :param generate_shifted_samples: whether each file should create shifted examples (highly increases size of X)
+    :param max_consecutive_duplicates:
+    :param path:
     :return: (X, Y)
     """
     X = []
     Y = []
     skipped = 0
+    duplicated_removed = 0
+    remove_duplicates = max_consecutive_duplicates != math.inf
     shifted_count = 0
     samples = load_samples(path)
+    instruments_count = 9 - len(remove_instrument_indices)
     number_of_samples = len(samples)
     print("Loading X and Y data...")
     for idx in range(number_of_samples):
@@ -178,6 +185,9 @@ def load_X_Y(
             else:
                 i = 0
 
+            duplicate_count = 0
+            last_x = None
+            last_y = None
             for _ in range(xy_pair_count):
                 x = []
                 y = []
@@ -202,21 +212,57 @@ def load_X_Y(
                     skipped += 1
                     continue
 
+                if not many_to_many:
+                    current_y = y[0]
+                else:
+                    current_y = y
+
+                if remove_duplicates:
+                    if last_x is not None and last_y is not None:
+                        if is_duplicate(current_y, last_x, last_y, x, instruments_count):
+                            duplicate_count += 1
+                        else:
+                            duplicate_count = 0
+                        if duplicate_count >= max_consecutive_duplicates:
+                            duplicated_removed += 1
+                            continue
+                    last_x = x.copy()
+                    last_y = current_y.copy()
+
                 X.append(x)
                 if not many_to_many:
-                    Y.append(y[0])
+                    Y.append(current_y)
                 else:
-                    Y.append(y)
+                    Y.append(current_y)
 
             if not generate_shifted_samples:
                 break
         shifted_count += offset
     print("Finished X and Y data!")
     print("\tSkipped {} entries because too many zeros in x or y".format(skipped))
+    if remove_duplicates:
+        print("\tRemoved {} duplicates because chain exceeded {}".format(duplicated_removed, max_consecutive_duplicates))
     if generate_shifted_samples:
         print("\tGenerated {} shifted samples from the input data".format(shifted_count))
     return numpy.array(X), numpy.array(Y)
 
+
+def is_duplicate(y1, x2, y2, x1, instrument_count: int) -> bool:
+    if len(x1) != len(x2) or len(y1) != len(y2):
+        return False
+
+    for i in range(len(x1)):
+        for j in range(instrument_count):
+            if x1[i][j] != x2[i][j]:
+                return False
+    for i in range(len(y1)):
+        for j in range(instrument_count):
+            if y1[i][j] != y2[i][j]:
+                return False
+
+    return True
+
 # quantize_midi_files()
+# process_midi_files()
 # save_as_numpy(process_midi_files())
 # print_meta()
