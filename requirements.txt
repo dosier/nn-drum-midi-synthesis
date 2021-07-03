@@ -1,6 +1,6 @@
 tensorflow==2.5.0
 keras==2.4.3
-numpy==1.21.0
+numpy==1.19.5
 music21~=6.7.1
 natsort~=7.1.1
 mido~=1.2.10
