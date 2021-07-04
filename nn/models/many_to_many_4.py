@@ -1,4 +1,4 @@
-from tensorflow.python.keras.optimizer_v2.nadam import Nadam
+from tensorflow.python.keras.optimizer_v2.rmsprop import RMSprop
 
 from nn.model_controller import ModelController
 from nn.preprocessing import HIGH_TOM, LOW_MID_TOM, HIGH_FLOOR_TOM, CRASH, RIDE
@@ -16,11 +16,11 @@ model = ModelController(
         CRASH[1],
         RIDE[1]
     ],
-    optimizer=Nadam(),
+    optimizer=RMSprop(),
     first_lstm_bidirectional=True,
-    n_lstm_layers=2,
-    lstm_dropout=0.1,
-    lstm_units=[512, 384]
+    n_lstm_layers=3,
+    lstm_dropout=0,
+    lstm_units=[512, 384, 256]
 )
 model.build()
 

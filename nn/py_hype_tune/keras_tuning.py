@@ -16,18 +16,18 @@ from tensorflow.python.keras.losses import BinaryCrossentropy
 from nn.preprocessing import load_X_Y, HIGH_TOM, LOW_MID_TOM, HIGH_FLOOR_TOM, CRASH, RIDE, shuffle_X_Y, to_data_set
 
 REMOVE_INSTRUMENT_INDICES = [
-    HIGH_TOM[1],
-    LOW_MID_TOM[1],
-    HIGH_FLOOR_TOM[1],
-    CRASH[1],
-    RIDE[1]
+    # HIGH_TOM[1],
+    # LOW_MID_TOM[1],
+    # HIGH_FLOOR_TOM[1],
+    # CRASH[1],
+    # RIDE[1]
 ]
 INSTRUMENTS_COUNT = 9 - len(REMOVE_INSTRUMENT_INDICES)
 
 INPUT_LENGTH = 16
 
 # If false than many to one
-MANY_TO_MANY = False
+MANY_TO_MANY = True
 
 if MANY_TO_MANY:
     OUTPUT_LENGTH = INPUT_LENGTH
@@ -52,7 +52,7 @@ def build_model(hp: HyperParameters):
     model.add(InputLayer(input_shape=(INPUT_LENGTH, INSTRUMENTS_COUNT)))
 
     lstm_bidirectional = hp.Choice('lstm_bidirectional', [True, False])
-    lstm_units = hp.Choice('lstm_units', [128, 256, 512])
+    lstm_units = hp.Choice('lstm_units', [64, 128, 256, 512])
     lstm_dropout = hp.Choice('lstm_dropout', [0.0, 0.1, 0.2, 0.3])
     n_lstm_layers = hp.Choice('n_lstm_layers', [2, 3, 4, 5])
     for i in range(n_lstm_layers):
@@ -100,9 +100,18 @@ tuners = [
     keras_tuner.BayesianOptimization(
         hypermodel=build_model,
         objective='val_binary_accuracy',
+        seed=69,
         max_trials=100,
         project_name=project_name,
-        directory=directory + "/bayes"
+        directory=directory + "/bayes/binary_accuracy"
+    ),
+    keras_tuner.BayesianOptimization(
+        hypermodel=build_model,
+        objective='val_accuracy',
+        seed=69,
+        max_trials=100,
+        project_name=project_name,
+        directory=directory + "/bayes/accuracy"
     )
 ]
 tuner = tuners[2]
@@ -150,6 +159,11 @@ elif isinstance(tuner, keras_tuner.BayesianOptimization):
     name += "BO_"
 else:
     name += "unknown_"
+if tuner == tuners[2]:
+    name += "binary_acc"
+elif tuner == tuners[3]:
+    name += "acc"
+
 model_json = best_model.to_json()
 with open("{}.json".format(name), "w") as json_file:
     json_file.write(model_json)

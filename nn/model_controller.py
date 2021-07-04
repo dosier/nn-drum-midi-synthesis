@@ -42,7 +42,7 @@ class ModelController:
         if many_to_many:
             self.output_length = input_length
             # min amount of non-zero values in (OUTPUT_LENGTH, INSTRUMENTS_COUNT)
-            self.min_non_zero_entries = int(input_length / 2)
+            self.min_non_zero_entries = input_length
             self.max_consecutive_duplicates = 5
         else:  # many_to_one
             self.output_length = 1
