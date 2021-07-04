@@ -1,8 +1,10 @@
+import os
 import random
 import shutil
 from typing import List, Optional
 
 import numpy
+from IPython.core.display import SVG
 from numpy import ndarray
 from tensorflow.keras.layers import LSTM
 from tensorflow.keras.models import Sequential
@@ -11,7 +13,7 @@ from tensorflow.python.keras.engine.input_layer import InputLayer
 from tensorflow.python.keras.layers import Dense, TimeDistributed, Bidirectional
 from tensorflow.python.keras.losses import BinaryCrossentropy
 from tensorflow.python.keras.optimizer_v2.optimizer_v2 import OptimizerV2
-from tensorflow.python.keras.utils.vis_utils import plot_model
+from tensorflow.python.keras.utils.vis_utils import plot_model, model_to_dot
 
 from nn.preprocessing import load_X_Y, shuffle_X_Y
 
@@ -142,7 +144,11 @@ class ModelController:
         print("Saved model {} to disk".format(self.name))
 
     def plot(self, folder_path: str = "plots/"):
+        if not os.path.exists(folder_path):
+            os.makedirs(folder_path)
         plot_model(self.model,
-                   to_file=folder_path + '{}.png'.format(self.name),
+                   to_file=folder_path + '{}.svg'.format(self.name),
+                   dpi=None,
                    show_shapes=True,
-                   show_layer_names=True)
+                   show_layer_names=False)
+        SVG(model_to_dot(self.model, show_shapes=True, show_layer_names=True).create(prog='dot', format='svg'))

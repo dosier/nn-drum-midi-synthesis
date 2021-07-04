@@ -2,13 +2,38 @@ import numpy
 
 from nn.model_load import load_model_and_weights
 from nn.preprocessing import load_X_Y
+from nn.py_util.midi_converter import MidiConverter
 
-X, Y = load_X_Y(True, 16, 16, [], 1)
+model_path = "models/mm_4_03_52/MM_4"
+model = load_model_and_weights(model_path)
 
-print("Size of X {}".format(X.shape))
-print("Size of Y {}".format(Y.shape))
+X = [
+    [1, 0, 0, 0],
+    [0, 0, 0, 1],
+    [0, 0, 0, 1],
+    [0, 0, 0, 1],
+    [0, 1, 0, 0],
+    [0, 0, 0, 0],
+    [0, 0, 0, 0],
+    [0, 0, 0, 0],
+    [0, 0, 0, 0],
+    [0, 0, 0, 0],
+    [1, 0, 0, 0],
+    [0, 0, 0, 0],
+    [0, 1, 0, 0],
+    [0, 0, 0, 0],
+    [0, 0, 0, 0],
+    [0, 0, 0, 0]
+]
+timed_notes = []
+for time_step in X:
+    timed_notes.append(time_step)
+repeat = 4
+X = numpy.array([X])
+for i in range(repeat):
+    X = numpy.around(model.predict(X), 0)
+    for time_step in X[0]:
+        timed_notes.append(time_step)
 
-model = load_model_and_weights("models/")
-print(numpy.around(model.predict(numpy.array([X[0]])), 3)[0])
-print(numpy.around(model.predict(numpy.array([X[0]])), 0)[0])
-print(Y[0])
+midi_converter = MidiConverter(model_path+"/")
+midi_converter.make_midi(timed_notes=numpy.array(timed_notes), bpm=100, filename="output.mid")
